@@ -102,18 +102,18 @@ suite.only('Task Configuration Test', () => {
 				});
 			});
 		});
-	});
-	suite('ConfiguredTask', () => {
-		suite('returns expected result', () => {
-			test('single', () => {
-				const expected = [{ taskName: 'task', command: 'echo test', type: 'any' } as ConfiguringTask];
-				const result = TaskParser.from(expected, {} as Globals, parseContext, {} as TaskConfigSource, { extensionId: 'registered', taskType: 'any', properties: {} } as TaskDefinition);
-				assertTaskParseResult(result, { configured: expected }, problemReporter, undefined);
-			});
-			test('multiple', () => {
-				const expected = [{ taskName: 'task', command: 'echo test', type: 'any' } as ConfiguringTask, { taskName: 'task 2', command: 'echo test', type: 'any' } as ConfiguringTask];
-				const result = TaskParser.from(expected, {} as Globals, parseContext, {} as TaskConfigSource, { extensionId: 'registered', taskType: 'any', properties: {} } as TaskDefinition);
-				assertTaskParseResult(result, { configured: expected }, problemReporter, undefined);
+		suite('ConfiguredTask', () => {
+			suite('returns expected result', () => {
+				test('single', () => {
+					const expected = [{ taskName: 'task', command: 'echo test', type: 'any' } as ConfiguringTask];
+					const result = TaskParser.from(expected, {} as Globals, parseContext, {} as TaskConfigSource, { extensionId: 'registered', taskType: 'any', properties: {} } as TaskDefinition);
+					assertTaskParseResult(result, { configured: expected }, problemReporter, undefined);
+				});
+				test('multiple', () => {
+					const expected = [{ taskName: 'task', command: 'echo test', type: 'any' } as ConfiguringTask, { taskName: 'task 2', command: 'echo test', type: 'any' } as ConfiguringTask];
+					const result = TaskParser.from(expected, {} as Globals, parseContext, {} as TaskConfigSource, { extensionId: 'registered', taskType: 'any', properties: {} } as TaskDefinition);
+					assertTaskParseResult(result, { configured: expected }, problemReporter, undefined);
+				});
 			});
 		});
 	});
