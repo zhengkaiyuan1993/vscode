@@ -86,7 +86,7 @@ suite.only('Task Configuration Test', () => {
 				});
 				test('command', () => {
 					const result = TaskParser.from([{ taskName: 'task' } as CustomTask], {} as Globals, parseContext, {} as TaskConfigSource);
-					assertTaskParseResult(result, undefined, problemReporter, "Error: the task 'task' doesn't define a command. The task will be ignored. Its definition");
+					assertTaskParseResult(result, undefined, problemReporter, "Error: the task 'task' doesn't define a command");
 				});
 			});
 			suite('returns expected result', () => {
@@ -132,14 +132,15 @@ function assertTaskParseResult(actual: ITaskParseResult, expected: ITestTaskPars
 	let index = 0;
 	if (expected?.configured) {
 		for (const taskParseResult of expected?.configured) {
-			ok(actual.configured[index]._id.includes(taskParseResult.taskName!));
+			strictEqual(actual.configured[index]._label, taskParseResult.taskName);
 			index++;
 		}
 	}
-
+	index = 0;
 	if (expected?.custom) {
-		for (const taskParseResult of actual.custom) {
-			ok(taskParseResult._id.length > 0);
+		for (const taskParseResult of expected?.custom) {
+			strictEqual(actual.custom[index]._label, taskParseResult.taskName);
+			index++;
 		}
 	}
 
