@@ -1389,7 +1389,7 @@ namespace ConfiguringTask {
 		customize: string;
 	}
 
-	export function from(this: void, external: ConfiguringTask, context: IParseContext, index: number, source: TaskConfigSource): Tasks.ConfiguringTask | undefined {
+	export function from(this: void, external: ConfiguringTask, context: IParseContext, index: number, source: TaskConfigSource, testTaskDefinition?: Tasks.TaskDefinition): Tasks.ConfiguringTask | undefined {
 		if (!external) {
 			return undefined;
 		}
@@ -1399,7 +1399,7 @@ namespace ConfiguringTask {
 			context.problemReporter.error(nls.localize('ConfigurationParser.noTaskType', 'Error: tasks configuration must have a type property. The configuration will be ignored.\n{0}\n', JSON.stringify(external, null, 4)));
 			return undefined;
 		}
-		let typeDeclaration = type ? TaskDefinitionRegistry.get(type) : undefined;
+		let typeDeclaration = type ? testTaskDefinition || TaskDefinitionRegistry.get(type) : undefined;
 		if (!typeDeclaration) {
 			let message = nls.localize('ConfigurationParser.noTypeDefinition', 'Error: there is no registered task type \'{0}\'. Did you miss installing an extension that provides a corresponding task provider?', type);
 			context.problemReporter.error(message);
@@ -1654,12 +1654,12 @@ namespace CustomTask {
 	}
 }
 
-interface TaskParseResult {
+export interface ITaskParseResult {
 	custom: Tasks.CustomTask[];
 	configured: Tasks.ConfiguringTask[];
 }
 
-namespace TaskParser {
+export namespace TaskParser {
 
 	function isCustomTask(value: CustomTask | ConfiguringTask): value is CustomTask {
 		let type = value.type;
@@ -1672,8 +1672,8 @@ namespace TaskParser {
 		process: ProcessExecutionSupportedContext
 	};
 
-	export function from(this: void, externals: Array<CustomTask | ConfiguringTask> | undefined, globals: Globals, context: IParseContext, source: TaskConfigSource): TaskParseResult {
-		let result: TaskParseResult = { custom: [], configured: [] };
+	export function from(this: void, externals: Array<CustomTask | ConfiguringTask> | undefined, globals: Globals, context: IParseContext, source: TaskConfigSource, testTaskDefinition?: Tasks.TaskDefinition): ITaskParseResult {
+		let result: ITaskParseResult = { custom: [], configured: [] };
 		if (!externals) {
 			return result;
 		}
@@ -1683,7 +1683,7 @@ namespace TaskParser {
 		const baseLoadIssues = Objects.deepClone(context.taskLoadIssues);
 		for (let index = 0; index < externals.length; index++) {
 			let external = externals[index];
-			const definition = external.type ? TaskDefinitionRegistry.get(external.type) : undefined;
+			const definition = external.type ? testTaskDefinition || TaskDefinitionRegistry.get(external.type) : undefined;
 			let typeNotSupported: boolean = false;
 			if (definition && definition.when && !context.contextKeyService.contextMatchesRules(definition.when)) {
 				typeNotSupported = true;
@@ -1743,7 +1743,7 @@ namespace TaskParser {
 					result.custom.push(customTask);
 				}
 			} else {
-				let configuredTask = ConfiguringTask.from(external, context, index, source);
+				let configuredTask = ConfiguringTask.from(external, context, index, source, testTaskDefinition);
 				if (configuredTask) {
 					configuredTask.addTaskLoadMessages(context.taskLoadIssues);
 					result.configured.push(configuredTask);
@@ -1795,7 +1795,7 @@ namespace TaskParser {
 	}
 }
 
-interface Globals {
+export interface Globals {
 	command?: Tasks.CommandConfiguration;
 	problemMatcher?: ICustomProblemMatcher[];
 	promptOnClose?: boolean;
@@ -1933,7 +1933,7 @@ export interface ParseResult {
 export interface IProblemReporter extends IProblemReporterBase {
 }
 
-class UUIDMap {
+export class UUIDMap {
 
 	private last: IStringDictionary<string | string[]> | undefined;
 	private current: IStringDictionary<string | string[]>;
@@ -2040,7 +2040,7 @@ class ConfigurationParser {
 		};
 	}
 
-	private createTaskRunnerConfiguration(fileConfig: ExternalTaskRunnerConfiguration, context: IParseContext, source: TaskConfigSource): TaskParseResult {
+	private createTaskRunnerConfiguration(fileConfig: ExternalTaskRunnerConfiguration, context: IParseContext, source: TaskConfigSource): ITaskParseResult {
 		let globals = Globals.from(fileConfig, context);
 		if (this.problemReporter.status.isFatal()) {
 			return { custom: [], configured: [] };
@@ -2070,7 +2070,7 @@ class ConfigurationParser {
 			);
 		}
 
-		let result: TaskParseResult = { custom: [], configured: [] };
+		let result: ITaskParseResult = { custom: [], configured: [] };
 		if (fileConfig.tasks) {
 			result = TaskParser.from(fileConfig.tasks, globals, context, source);
 		}
