@@ -271,7 +271,7 @@ stages:
                       VSCODE_RUN_INTEGRATION_TESTS: false
                       VSCODE_RUN_SMOKE_TESTS: false
 
-          - ${{ if and(eq(parameters.VSCODE_BUILD_WIN32, true), eq(parameters.VSCODE_STEP_ON_IT, false)) }}:
+          - ${{ if and(eq(parameters.VSCODE_BUILD_WIN32_32BIT, true), eq(parameters.VSCODE_STEP_ON_IT, false)) }}:
               - job: Windows32UnitTests
                 displayName: Windows32 (Unit Tests)
                 timeoutInMinutes: 60
@@ -286,7 +286,7 @@ stages:
                       VSCODE_RUN_INTEGRATION_TESTS: false
                       VSCODE_RUN_SMOKE_TESTS: false
 
-          - ${{ if and(eq(parameters.VSCODE_BUILD_WIN32, true), eq(parameters.VSCODE_STEP_ON_IT, false)) }}:
+          - ${{ if and(eq(parameters.VSCODE_BUILD_WIN32_32BIT, true), eq(parameters.VSCODE_STEP_ON_IT, false)) }}:
               - job: Windows32IntegrationTests
                 displayName: Windows32 (Integration Tests)
                 timeoutInMinutes: 60
@@ -301,7 +301,7 @@ stages:
                       VSCODE_RUN_INTEGRATION_TESTS: true
                       VSCODE_RUN_SMOKE_TESTS: false
 
-          - ${{ if and(eq(parameters.VSCODE_BUILD_WIN32, true), eq(parameters.VSCODE_STEP_ON_IT, false)) }}:
+          - ${{ if and(eq(parameters.VSCODE_BUILD_WIN32_32BIT, true), eq(parameters.VSCODE_STEP_ON_IT, false)) }}:
               - job: Windows32SmokeTests
                 displayName: Windows32 (Smoke Tests)
                 timeoutInMinutes: 60
