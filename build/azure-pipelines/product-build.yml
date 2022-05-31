@@ -219,10 +219,10 @@ stages:
                 timeoutInMinutes: 120
                 variables:
                   VSCODE_ARCH: x64
+                  VSCODE_PUBLISH: false
                 steps:
                   - template: win32/product-build-win32.yml
                     parameters:
-                      VSCODE_PUBLISH: false
                       VSCODE_QUALITY: ${{ variables.VSCODE_QUALITY }}
                       VSCODE_RUN_UNIT_TESTS: true
                       VSCODE_RUN_INTEGRATION_TESTS: false
