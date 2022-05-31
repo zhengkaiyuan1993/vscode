@@ -208,6 +208,7 @@ stages:
                 steps:
                   - template: win32/product-build-win32.yml
                     parameters:
+                      VSCODE_PUBLISH: true
                       VSCODE_QUALITY: ${{ variables.VSCODE_QUALITY }}
                       VSCODE_RUN_UNIT_TESTS: false
                       VSCODE_RUN_INTEGRATION_TESTS: false
@@ -219,10 +220,10 @@ stages:
                 timeoutInMinutes: 60
                 variables:
                   VSCODE_ARCH: x64
-                  VSCODE_PUBLISH: false
                 steps:
                   - template: win32/product-build-win32.yml
                     parameters:
+                      VSCODE_PUBLISH: false
                       VSCODE_QUALITY: ${{ variables.VSCODE_QUALITY }}
                       VSCODE_RUN_UNIT_TESTS: true
                       VSCODE_RUN_INTEGRATION_TESTS: false
@@ -234,10 +235,10 @@ stages:
                 timeoutInMinutes: 60
                 variables:
                   VSCODE_ARCH: x64
-                  VSCODE_PUBLISH: false
                 steps:
                   - template: win32/product-build-win32.yml
                     parameters:
+                      VSCODE_PUBLISH: false
                       VSCODE_QUALITY: ${{ variables.VSCODE_QUALITY }}
                       VSCODE_RUN_UNIT_TESTS: false
                       VSCODE_RUN_INTEGRATION_TESTS: true
@@ -249,10 +250,10 @@ stages:
                 timeoutInMinutes: 60
                 variables:
                   VSCODE_ARCH: x64
-                  VSCODE_PUBLISH: false
                 steps:
                   - template: win32/product-build-win32.yml
                     parameters:
+                      VSCODE_PUBLISH: false
                       VSCODE_QUALITY: ${{ variables.VSCODE_QUALITY }}
                       VSCODE_RUN_UNIT_TESTS: false
                       VSCODE_RUN_INTEGRATION_TESTS: false
