@@ -170,13 +170,14 @@ steps:
     displayName: Build Server
     condition: and(succeeded(), ne(variables['VSCODE_ARCH'], 'arm64'))
 
-  - powershell: |
-      . build/azure-pipelines/win32/exec.ps1
-      $ErrorActionPreference = "Stop"
-      $env:VSCODE_MIXIN_PASSWORD="$(github-distro-mixin-password)"
-      exec { yarn npm-run-all -lp "playwright-install" }
-    displayName: Download Playwright
-    condition: and(succeeded(), eq(variables['VSCODE_STEP_ON_IT'], 'false'), ne(variables['VSCODE_ARCH'], 'arm64'))
+  - ${{ if or(eq(parameters.VSCODE_RUN_UNIT_TESTS, true), eq(parameters.VSCODE_RUN_INTEGRATION_TESTS, true), eq(parameters.VSCODE_RUN_SMOKE_TESTS, true)) }}:
+    - powershell: |
+        . build/azure-pipelines/win32/exec.ps1
+        $ErrorActionPreference = "Stop"
+        $env:VSCODE_MIXIN_PASSWORD="$(github-distro-mixin-password)"
+        exec { yarn npm-run-all -lp "playwright-install" }
+      displayName: Download Playwright
+      condition: and(succeeded(), eq(variables['VSCODE_STEP_ON_IT'], 'false'), ne(variables['VSCODE_ARCH'], 'arm64'))
 
   - ${{ if eq(parameters.VSCODE_RUN_UNIT_TESTS, true) }}:
     - powershell: |
@@ -315,38 +316,42 @@ steps:
       continueOnError: true
       condition: and(succeededOrFailed(), eq(variables['VSCODE_STEP_ON_IT'], 'false'))
 
-  - task: PublishPipelineArtifact@0
-    inputs:
-      artifactName: crash-dump-windows-$(VSCODE_ARCH)
-      targetPath: .build\crashes
-    displayName: "Publish Crash Reports"
-    continueOnError: true
-    condition: failed()
+  - ${{ if or(eq(parameters.VSCODE_RUN_UNIT_TESTS, true), eq(parameters.VSCODE_RUN_INTEGRATION_TESTS, true), eq(parameters.VSCODE_RUN_SMOKE_TESTS, true)) }}:
+    - task: PublishPipelineArtifact@0
+      inputs:
+        artifactName: crash-dump-windows-$(VSCODE_ARCH)
+        targetPath: .build\crashes
+      displayName: "Publish Crash Reports"
+      continueOnError: true
+      condition: failed()
 
-  # In order to properly symbolify above crash reports
-  # (if any), we need the compiled native modules too
-  - task: PublishPipelineArtifact@0
-    inputs:
-      artifactName: node-modules-windows-$(VSCODE_ARCH)
-      targetPath: node_modules
-    displayName: "Publish Node Modules"
-    continueOnError: true
-    condition: failed()
+  - ${{ if or(eq(parameters.VSCODE_RUN_UNIT_TESTS, true), eq(parameters.VSCODE_RUN_INTEGRATION_TESTS, true), eq(parameters.VSCODE_RUN_SMOKE_TESTS, true)) }}:
+    # In order to properly symbolify above crash reports
+    # (if any), we need the compiled native modules too
+    - task: PublishPipelineArtifact@0
+      inputs:
+        artifactName: node-modules-windows-$(VSCODE_ARCH)
+        targetPath: node_modules
+      displayName: "Publish Node Modules"
+      continueOnError: true
+      condition: failed()
 
-  - task: PublishPipelineArtifact@0
-    inputs:
-      artifactName: logs-windows-$(VSCODE_ARCH)-$(System.JobAttempt)
-      targetPath: .build\logs
-    displayName: "Publish Log Files"
-    continueOnError: true
-    condition: and(failed(), eq(variables['VSCODE_STEP_ON_IT'], 'false'), ne(variables['VSCODE_ARCH'], 'arm64'))
+  - ${{ if or(eq(parameters.VSCODE_RUN_UNIT_TESTS, true), eq(parameters.VSCODE_RUN_INTEGRATION_TESTS, true), eq(parameters.VSCODE_RUN_SMOKE_TESTS, true)) }}:
+    - task: PublishPipelineArtifact@0
+      inputs:
+        artifactName: logs-windows-$(VSCODE_ARCH)-$(System.JobAttempt)
+        targetPath: .build\logs
+      displayName: "Publish Log Files"
+      continueOnError: true
+      condition: and(failed(), eq(variables['VSCODE_STEP_ON_IT'], 'false'), ne(variables['VSCODE_ARCH'], 'arm64'))
 
-  - task: PublishTestResults@2
-    displayName: Publish Tests Results
-    inputs:
-      testResultsFiles: "*-results.xml"
-      searchFolder: "$(Build.ArtifactStagingDirectory)/test-results"
-    condition: and(succeededOrFailed(), eq(variables['VSCODE_STEP_ON_IT'], 'false'), ne(variables['VSCODE_ARCH'], 'arm64'))
+  - ${{ if or(eq(parameters.VSCODE_RUN_UNIT_TESTS, true), eq(parameters.VSCODE_RUN_INTEGRATION_TESTS, true), eq(parameters.VSCODE_RUN_SMOKE_TESTS, true)) }}:
+    - task: PublishTestResults@2
+      displayName: Publish Tests Results
+      inputs:
+        testResultsFiles: "*-results.xml"
+        searchFolder: "$(Build.ArtifactStagingDirectory)/test-results"
+      condition: and(succeededOrFailed(), eq(variables['VSCODE_STEP_ON_IT'], 'false'), ne(variables['VSCODE_ARCH'], 'arm64'))
 
   - ${{ if ne(parameters.VSCODE_QUALITY, 'oss') }}:
     - task: UseDotNet@2
