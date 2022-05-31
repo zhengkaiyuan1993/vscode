@@ -339,7 +339,7 @@ stages:
           - LinuxServerDependencies
         pool: vscode-1es-linux
         jobs:
-          - ${{ if eq(parameters.VSCODE_BUILD_LINUX, true) }}:
+          - ${{ if and(eq(parameters.VSCODE_BUILD_LINUX, true), eq(variables['VSCODE_PUBLISH'], true)) }}:
               - job: Linuxx64
                 container: vscode-bionic-x64
                 variables:
@@ -349,7 +349,62 @@ stages:
                 steps:
                   - template: linux/product-build-linux-client.yml
                     parameters:
+                      VSCODE_PUBLISH: true
                       VSCODE_QUALITY: ${{ variables.VSCODE_QUALITY }}
+                      VSCODE_RUN_UNIT_TESTS: false
+                      VSCODE_RUN_INTEGRATION_TESTS: false
+                      VSCODE_RUN_SMOKE_TESTS: false
+
+          - ${{ if and(eq(parameters.VSCODE_BUILD_LINUX, true), eq(parameters.VSCODE_STEP_ON_IT, false)) }}:
+              - job: Linuxx64UnitTests
+                displayName: Linuxx64 (Unit Tests)
+                container: vscode-bionic-x64
+                variables:
+                  VSCODE_ARCH: x64
+                  NPM_ARCH: x64
+                  DISPLAY: ":10"
+                steps:
+                  - template: linux/product-build-linux-client.yml
+                    parameters:
+                      VSCODE_PUBLISH: false
+                      VSCODE_QUALITY: ${{ variables.VSCODE_QUALITY }}
+                      VSCODE_RUN_UNIT_TESTS: true
+                      VSCODE_RUN_INTEGRATION_TESTS: false
+                      VSCODE_RUN_SMOKE_TESTS: false
+
+          - ${{ if and(eq(parameters.VSCODE_BUILD_LINUX, true), eq(parameters.VSCODE_STEP_ON_IT, false)) }}:
+              - job: Linuxx64IntegrationTests
+                displayName: Linuxx64 (Integration Tests)
+                container: vscode-bionic-x64
+                variables:
+                  VSCODE_ARCH: x64
+                  NPM_ARCH: x64
+                  DISPLAY: ":10"
+                steps:
+                  - template: linux/product-build-linux-client.yml
+                    parameters:
+                      VSCODE_PUBLISH: false
+                      VSCODE_QUALITY: ${{ variables.VSCODE_QUALITY }}
+                      VSCODE_RUN_UNIT_TESTS: false
+                      VSCODE_RUN_INTEGRATION_TESTS: true
+                      VSCODE_RUN_SMOKE_TESTS: false
+
+          - ${{ if and(eq(parameters.VSCODE_BUILD_LINUX, true), eq(parameters.VSCODE_STEP_ON_IT, false)) }}:
+              - job: Linuxx64SmokeTests
+                displayName: Linuxx64 (Smoke Tests)
+                container: vscode-bionic-x64
+                variables:
+                  VSCODE_ARCH: x64
+                  NPM_ARCH: x64
+                  DISPLAY: ":10"
+                steps:
+                  - template: linux/product-build-linux-client.yml
+                    parameters:
+                      VSCODE_PUBLISH: false
+                      VSCODE_QUALITY: ${{ variables.VSCODE_QUALITY }}
+                      VSCODE_RUN_UNIT_TESTS: false
+                      VSCODE_RUN_INTEGRATION_TESTS: false
+                      VSCODE_RUN_SMOKE_TESTS: true
 
           - ${{ if and(eq(variables['VSCODE_CIBUILD'], false), eq(parameters.VSCODE_BUILD_LINUX, true), ne(variables['VSCODE_PUBLISH'], 'false')) }}:
               - job: LinuxSnap
@@ -370,6 +425,7 @@ stages:
                 steps:
                   - template: linux/product-build-linux-client.yml
                     parameters:
+                      VSCODE_PUBLISH: true
                       VSCODE_QUALITY: ${{ variables.VSCODE_QUALITY }}
 
           # TODO@joaomoreno: We don't ship ARM snaps for now
@@ -392,6 +448,7 @@ stages:
                 steps:
                   - template: linux/product-build-linux-client.yml
                     parameters:
+                      VSCODE_PUBLISH: true
                       VSCODE_QUALITY: ${{ variables.VSCODE_QUALITY }}
 
           # TODO@joaomoreno: We don't ship ARM snaps for now
