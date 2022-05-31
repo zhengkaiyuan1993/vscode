@@ -200,9 +200,9 @@ stages:
           - Compile
         pool: vscode-1es-windows
         jobs:
-          - ${{ if and(eq(parameters.VSCODE_BUILD_WIN32, true), eq(variables['VSCODE_CIBUILD'], false)) }}:
+          - ${{ if and(eq(parameters.VSCODE_BUILD_WIN32, true), eq(variables['VSCODE_CIBUILD'], false), eq(variables['VSCODE_PUBLISH'], true)) }}:
               - job: Windows
-                timeoutInMinutes: 120
+                timeoutInMinutes: 60
                 variables:
                   VSCODE_ARCH: x64
                 steps:
@@ -216,7 +216,7 @@ stages:
           - ${{ if and(eq(parameters.VSCODE_BUILD_WIN32, true), eq(parameters.VSCODE_STEP_ON_IT, false)) }}:
               - job: WindowsUnitTests
                 displayName: Windows (Unit Tests)
-                timeoutInMinutes: 120
+                timeoutInMinutes: 60
                 variables:
                   VSCODE_ARCH: x64
                   VSCODE_PUBLISH: false
@@ -228,7 +228,37 @@ stages:
                       VSCODE_RUN_INTEGRATION_TESTS: false
                       VSCODE_RUN_SMOKE_TESTS: false
 
-          - ${{ if and(eq(variables['VSCODE_CIBUILD'], false), eq(parameters.VSCODE_BUILD_WIN32_32BIT, true)) }}:
+          - ${{ if and(eq(parameters.VSCODE_BUILD_WIN32, true), eq(parameters.VSCODE_STEP_ON_IT, false)) }}:
+              - job: WindowsIntegrationTests
+                displayName: Windows (Integration Tests)
+                timeoutInMinutes: 60
+                variables:
+                  VSCODE_ARCH: x64
+                  VSCODE_PUBLISH: false
+                steps:
+                  - template: win32/product-build-win32.yml
+                    parameters:
+                      VSCODE_QUALITY: ${{ variables.VSCODE_QUALITY }}
+                      VSCODE_RUN_UNIT_TESTS: false
+                      VSCODE_RUN_INTEGRATION_TESTS: true
+                      VSCODE_RUN_SMOKE_TESTS: false
+
+          - ${{ if and(eq(parameters.VSCODE_BUILD_WIN32, true), eq(parameters.VSCODE_STEP_ON_IT, false)) }}:
+              - job: WindowsSmokeTests
+                displayName: Windows (Smoke Tests)
+                timeoutInMinutes: 60
+                variables:
+                  VSCODE_ARCH: x64
+                  VSCODE_PUBLISH: false
+                steps:
+                  - template: win32/product-build-win32.yml
+                    parameters:
+                      VSCODE_QUALITY: ${{ variables.VSCODE_QUALITY }}
+                      VSCODE_RUN_UNIT_TESTS: false
+                      VSCODE_RUN_INTEGRATION_TESTS: false
+                      VSCODE_RUN_SMOKE_TESTS: true
+
+          - ${{ if and(eq(parameters.VSCODE_BUILD_WIN32_32BIT, true), eq(variables['VSCODE_CIBUILD'], false), eq(variables['VSCODE_PUBLISH'], true)) }}:
               - job: Windows32
                 timeoutInMinutes: 120
                 variables:
@@ -237,8 +267,56 @@ stages:
                   - template: win32/product-build-win32.yml
                     parameters:
                       VSCODE_QUALITY: ${{ variables.VSCODE_QUALITY }}
+                      VSCODE_RUN_UNIT_TESTS: false
+                      VSCODE_RUN_INTEGRATION_TESTS: false
+                      VSCODE_RUN_SMOKE_TESTS: false
 
-          - ${{ if and(eq(variables['VSCODE_CIBUILD'], false), eq(parameters.VSCODE_BUILD_WIN32_ARM64, true)) }}:
+          - ${{ if and(eq(parameters.VSCODE_BUILD_WIN32, true), eq(parameters.VSCODE_STEP_ON_IT, false)) }}:
+              - job: WindowsUnitTests
+                displayName: Windows32 (Unit Tests)
+                timeoutInMinutes: 60
+                variables:
+                  VSCODE_ARCH: ia32
+                  VSCODE_PUBLISH: false
+                steps:
+                  - template: win32/product-build-win32.yml
+                    parameters:
+                      VSCODE_QUALITY: ${{ variables.VSCODE_QUALITY }}
+                      VSCODE_RUN_UNIT_TESTS: true
+                      VSCODE_RUN_INTEGRATION_TESTS: false
+                      VSCODE_RUN_SMOKE_TESTS: false
+
+          - ${{ if and(eq(parameters.VSCODE_BUILD_WIN32, true), eq(parameters.VSCODE_STEP_ON_IT, false)) }}:
+              - job: WindowsIntegrationTests
+                displayName: Windows32 (Integration Tests)
+                timeoutInMinutes: 60
+                variables:
+                  VSCODE_ARCH: ia32
+                  VSCODE_PUBLISH: false
+                steps:
+                  - template: win32/product-build-win32.yml
+                    parameters:
+                      VSCODE_QUALITY: ${{ variables.VSCODE_QUALITY }}
+                      VSCODE_RUN_UNIT_TESTS: false
+                      VSCODE_RUN_INTEGRATION_TESTS: true
+                      VSCODE_RUN_SMOKE_TESTS: false
+
+          - ${{ if and(eq(parameters.VSCODE_BUILD_WIN32, true), eq(parameters.VSCODE_STEP_ON_IT, false)) }}:
+              - job: WindowsSmokeTests
+                displayName: Windows32 (Smoke Tests)
+                timeoutInMinutes: 60
+                variables:
+                  VSCODE_ARCH: ia32
+                  VSCODE_PUBLISH: false
+                steps:
+                  - template: win32/product-build-win32.yml
+                    parameters:
+                      VSCODE_QUALITY: ${{ variables.VSCODE_QUALITY }}
+                      VSCODE_RUN_UNIT_TESTS: false
+                      VSCODE_RUN_INTEGRATION_TESTS: false
+                      VSCODE_RUN_SMOKE_TESTS: true
+
+          - ${{ if and(eq(parameters.VSCODE_BUILD_WIN32_ARM64, true), eq(variables['VSCODE_CIBUILD'], false), eq(variables['VSCODE_PUBLISH'], true)) }}:
               - job: WindowsARM64
                 timeoutInMinutes: 90
                 variables:
@@ -247,6 +325,9 @@ stages:
                   - template: win32/product-build-win32.yml
                     parameters:
                       VSCODE_QUALITY: ${{ variables.VSCODE_QUALITY }}
+                      VSCODE_RUN_UNIT_TESTS: false
+                      VSCODE_RUN_INTEGRATION_TESTS: false
+                      VSCODE_RUN_SMOKE_TESTS: false
 
   - ${{ if and(eq(parameters.VSCODE_COMPILE_ONLY, false), eq(variables['VSCODE_BUILD_STAGE_LINUX'], true)) }}:
       - stage: Linux
