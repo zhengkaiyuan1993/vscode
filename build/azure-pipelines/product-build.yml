@@ -331,7 +331,7 @@ stages:
           - LinuxServerDependencies
         pool: vscode-1es-linux
         jobs:
-          - ${{ if and(eq(parameters.VSCODE_BUILD_LINUX, true), eq(variables['VSCODE_PUBLISH'], true)) }}:
+          - ${{ if and(eq(parameters.VSCODE_BUILD_LINUX, true), eq(variables['VSCODE_CIBUILD'], false)) }}:
               - job: Linuxx64
                 container: vscode-bionic-x64
                 variables:
@@ -341,7 +341,7 @@ stages:
                 steps:
                   - template: linux/product-build-linux-client.yml
                     parameters:
-                      VSCODE_PUBLISH: true
+                      VSCODE_PUBLISH: ${{ variables.VSCODE_PUBLISH }}
                       VSCODE_QUALITY: ${{ variables.VSCODE_QUALITY }}
                       VSCODE_RUN_UNIT_TESTS: false
                       VSCODE_RUN_INTEGRATION_TESTS: false
@@ -363,8 +363,6 @@ stages:
                       VSCODE_RUN_UNIT_TESTS: true
                       VSCODE_RUN_INTEGRATION_TESTS: false
                       VSCODE_RUN_SMOKE_TESTS: false
-
-          - ${{ if and(eq(parameters.VSCODE_BUILD_LINUX, true), eq(parameters.VSCODE_STEP_ON_IT, false)) }}:
               - job: Linuxx64IntegrationTests
                 displayName: Linuxx64 (Integration Tests)
                 container: vscode-bionic-x64
@@ -380,8 +378,6 @@ stages:
                       VSCODE_RUN_UNIT_TESTS: false
                       VSCODE_RUN_INTEGRATION_TESTS: true
                       VSCODE_RUN_SMOKE_TESTS: false
-
-          - ${{ if and(eq(parameters.VSCODE_BUILD_LINUX, true), eq(parameters.VSCODE_STEP_ON_IT, false)) }}:
               - job: Linuxx64SmokeTests
                 displayName: Linuxx64 (Smoke Tests)
                 container: vscode-bionic-x64
@@ -398,7 +394,7 @@ stages:
                       VSCODE_RUN_INTEGRATION_TESTS: false
                       VSCODE_RUN_SMOKE_TESTS: true
 
-          - ${{ if and(eq(variables['VSCODE_CIBUILD'], false), eq(parameters.VSCODE_BUILD_LINUX, true), ne(variables['VSCODE_PUBLISH'], 'false')) }}:
+          - ${{ if and(eq(parameters.VSCODE_BUILD_LINUX, true), eq(variables['VSCODE_PUBLISH'], true)) }}:
               - job: LinuxSnap
                 dependsOn:
                   - Linuxx64
@@ -408,7 +404,7 @@ stages:
                 steps:
                   - template: linux/snap-build-linux.yml
 
-          - ${{ if and(eq(variables['VSCODE_CIBUILD'], false), eq(parameters.VSCODE_BUILD_LINUX_ARMHF, true)) }}:
+          - ${{ if and(eq(parameters.VSCODE_BUILD_LINUX_ARMHF, true), eq(variables['VSCODE_CIBUILD'], false)) }}:
               - job: LinuxArmhf
                 container: vscode-armhf
                 variables:
@@ -417,11 +413,14 @@ stages:
                 steps:
                   - template: linux/product-build-linux-client.yml
                     parameters:
-                      VSCODE_PUBLISH: true
+                      VSCODE_PUBLISH: ${{ variables.VSCODE_PUBLISH }}
                       VSCODE_QUALITY: ${{ variables.VSCODE_QUALITY }}
+                      VSCODE_RUN_UNIT_TESTS: false
+                      VSCODE_RUN_INTEGRATION_TESTS: false
+                      VSCODE_RUN_SMOKE_TESTS: false
 
           # TODO@joaomoreno: We don't ship ARM snaps for now
-          - ${{ if and(false, eq(variables['VSCODE_CIBUILD'], false), eq(parameters.VSCODE_BUILD_LINUX_ARMHF, true)) }}:
+          - ${{ if and(false, eq(parameters.VSCODE_BUILD_LINUX_ARMHF, true), eq(variables['VSCODE_CIBUILD'], false)) }}:
               - job: LinuxSnapArmhf
                 dependsOn:
                   - LinuxArmhf
@@ -431,7 +430,7 @@ stages:
                 steps:
                   - template: linux/snap-build-linux.yml
 
-          - ${{ if and(eq(variables['VSCODE_CIBUILD'], false), eq(parameters.VSCODE_BUILD_LINUX_ARM64, true)) }}:
+          - ${{ if and(eq(parameters.VSCODE_BUILD_LINUX_ARM64, true), eq(variables['VSCODE_CIBUILD'], false)) }}:
               - job: LinuxArm64
                 container: vscode-arm64
                 variables:
@@ -440,11 +439,11 @@ stages:
                 steps:
                   - template: linux/product-build-linux-client.yml
                     parameters:
-                      VSCODE_PUBLISH: true
+                      VSCODE_PUBLISH: ${{ variables.VSCODE_PUBLISH }}
                       VSCODE_QUALITY: ${{ variables.VSCODE_QUALITY }}
 
           # TODO@joaomoreno: We don't ship ARM snaps for now
-          - ${{ if and(false, eq(variables['VSCODE_CIBUILD'], false), eq(parameters.VSCODE_BUILD_LINUX_ARM64, true)) }}:
+          - ${{ if and(false, eq(parameters.VSCODE_BUILD_LINUX_ARM64, true), eq(variables['VSCODE_CIBUILD'], false)) }}:
               - job: LinuxSnapArm64
                 dependsOn:
                   - LinuxArm64
@@ -454,14 +453,14 @@ stages:
                 steps:
                   - template: linux/snap-build-linux.yml
 
-          - ${{ if and(eq(variables['VSCODE_CIBUILD'], false), eq(parameters.VSCODE_BUILD_LINUX_ALPINE, true)) }}:
+          - ${{ if and(eq(parameters.VSCODE_BUILD_LINUX_ALPINE, true), eq(variables['VSCODE_CIBUILD'], false)) }}:
               - job: LinuxAlpine
                 variables:
                   VSCODE_ARCH: x64
                 steps:
                   - template: linux/product-build-alpine.yml
 
-          - ${{ if and(eq(variables['VSCODE_CIBUILD'], false), eq(parameters.VSCODE_BUILD_LINUX_ALPINE_ARM64, true)) }}:
+          - ${{ if and(eq(parameters.VSCODE_BUILD_LINUX_ALPINE_ARM64, true), eq(variables['VSCODE_CIBUILD'], false)) }}:
               - job: LinuxAlpineArm64
                 timeoutInMinutes: 120
                 variables:
@@ -469,7 +468,7 @@ stages:
                 steps:
                   - template: linux/product-build-alpine.yml
 
-          - ${{ if and(eq(variables['VSCODE_CIBUILD'], false), eq(parameters.VSCODE_BUILD_WEB, true)) }}:
+          - ${{ if and(eq(parameters.VSCODE_BUILD_WEB, true), eq(variables['VSCODE_CIBUILD'], false)) }}:
               - job: LinuxWeb
                 variables:
                   VSCODE_ARCH: x64
