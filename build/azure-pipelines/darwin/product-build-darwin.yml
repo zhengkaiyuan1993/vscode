@@ -158,46 +158,52 @@ steps:
         VSCODE_RUN_INTEGRATION_TESTS: ${{ parameters.VSCODE_RUN_INTEGRATION_TESTS }}
         VSCODE_RUN_SMOKE_TESTS: ${{ parameters.VSCODE_RUN_SMOKE_TESTS }}
 
-  # Setting hardened entitlements is a requirement for:
-  # * Apple notarization
-  # * Running tests on Big Sur (because Big Sur has additional security precautions)
-  - script: |
-      set -e
-      security create-keychain -p pwd $(agent.tempdirectory)/buildagent.keychain
-      security default-keychain -s $(agent.tempdirectory)/buildagent.keychain
-      security unlock-keychain -p pwd $(agent.tempdirectory)/buildagent.keychain
-      echo "$(macos-developer-certificate)" | base64 -D > $(agent.tempdirectory)/cert.p12
-      security import $(agent.tempdirectory)/cert.p12 -k $(agent.tempdirectory)/buildagent.keychain -P "$(macos-developer-certificate-key)" -T /usr/bin/codesign
-      security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k pwd $(agent.tempdirectory)/buildagent.keychain
-      VSCODE_ARCH=$(VSCODE_ARCH) DEBUG=electron-osx-sign* node build/darwin/sign.js
-    displayName: Set Hardened Entitlements
+  - ${{ if eq(parameters.VSCODE_PUBLISH, true) }}:
+    # Setting hardened entitlements is a requirement for:
+    # * Apple notarization
+    # * Running tests on Big Sur (because Big Sur has additional security precautions)
+    - script: |
+        set -e
+        security create-keychain -p pwd $(agent.tempdirectory)/buildagent.keychain
+        security default-keychain -s $(agent.tempdirectory)/buildagent.keychain
+        security unlock-keychain -p pwd $(agent.tempdirectory)/buildagent.keychain
+        echo "$(macos-developer-certificate)" | base64 -D > $(agent.tempdirectory)/cert.p12
+        security import $(agent.tempdirectory)/cert.p12 -k $(agent.tempdirectory)/buildagent.keychain -P "$(macos-developer-certificate-key)" -T /usr/bin/codesign
+        security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k pwd $(agent.tempdirectory)/buildagent.keychain
+        VSCODE_ARCH=$(VSCODE_ARCH) DEBUG=electron-osx-sign* node build/darwin/sign.js
+      displayName: Set Hardened Entitlements
 
-  - script: |
-      set -e
-      pushd $(agent.builddirectory)/VSCode-darwin-$(VSCODE_ARCH) && zip -r -X -y $(agent.builddirectory)/VSCode-darwin-$(VSCODE_ARCH).zip * && popd
-    displayName: Archive build
+  - ${{ if eq(parameters.VSCODE_PUBLISH, true) }}:
+    - script: |
+        set -e
+        pushd $(agent.builddirectory)/VSCode-darwin-$(VSCODE_ARCH) && zip -r -X -y $(agent.builddirectory)/VSCode-darwin-$(VSCODE_ARCH).zip * && popd
+      displayName: Archive build
 
-  - script: |
-      set -e
+  - ${{ if eq(parameters.VSCODE_PUBLISH, true) }}:
+    - script: |
+        set -e
 
-      # package Remote Extension Host
-      pushd .. && mv vscode-reh-darwin-$(VSCODE_ARCH) vscode-server-darwin-$(VSCODE_ARCH) && zip -Xry vscode-server-darwin-$(VSCODE_ARCH).zip vscode-server-darwin-$(VSCODE_ARCH) && popd
+        # package Remote Extension Host
+        pushd .. && mv vscode-reh-darwin-$(VSCODE_ARCH) vscode-server-darwin-$(VSCODE_ARCH) && zip -Xry vscode-server-darwin-$(VSCODE_ARCH).zip vscode-server-darwin-$(VSCODE_ARCH) && popd
 
-      # package Remote Extension Host (Web)
-      pushd .. && mv vscode-reh-web-darwin-$(VSCODE_ARCH) vscode-server-darwin-$(VSCODE_ARCH)-web && zip -Xry vscode-server-darwin-$(VSCODE_ARCH)-web.zip vscode-server-darwin-$(VSCODE_ARCH)-web && popd
-    displayName: Prepare to publish servers
+        # package Remote Extension Host (Web)
+        pushd .. && mv vscode-reh-web-darwin-$(VSCODE_ARCH) vscode-server-darwin-$(VSCODE_ARCH)-web && zip -Xry vscode-server-darwin-$(VSCODE_ARCH)-web.zip vscode-server-darwin-$(VSCODE_ARCH)-web && popd
+      displayName: Prepare to publish servers
 
-  - publish: $(Agent.BuildDirectory)/VSCode-darwin-$(VSCODE_ARCH).zip
-    artifact: unsigned_vscode_client_darwin_$(VSCODE_ARCH)_archive
-    displayName: Publish client archive
+  - ${{ if eq(parameters.VSCODE_PUBLISH, true) }}:
+    - publish: $(Agent.BuildDirectory)/VSCode-darwin-$(VSCODE_ARCH).zip
+      artifact: unsigned_vscode_client_darwin_$(VSCODE_ARCH)_archive
+      displayName: Publish client archive
 
-  - publish: $(Agent.BuildDirectory)/vscode-server-darwin-$(VSCODE_ARCH).zip
-    artifact: vscode_server_darwin_$(VSCODE_ARCH)_archive-unsigned
-    displayName: Publish server archive
+  - ${{ if eq(parameters.VSCODE_PUBLISH, true) }}:
+    - publish: $(Agent.BuildDirectory)/vscode-server-darwin-$(VSCODE_ARCH).zip
+      artifact: vscode_server_darwin_$(VSCODE_ARCH)_archive-unsigned
+      displayName: Publish server archive
 
-  - publish: $(Agent.BuildDirectory)/vscode-server-darwin-$(VSCODE_ARCH)-web.zip
-    artifact: vscode_web_darwin_$(VSCODE_ARCH)_archive-unsigned
-    displayName: Publish web server archive
+  - ${{ if eq(parameters.VSCODE_PUBLISH, true) }}:
+    - publish: $(Agent.BuildDirectory)/vscode-server-darwin-$(VSCODE_ARCH)-web.zip
+      artifact: vscode_web_darwin_$(VSCODE_ARCH)_archive-unsigned
+      displayName: Publish web server archive
 
   - ${{ if eq(parameters.VSCODE_PUBLISH, true) }}:
     - task: AzureCLI@2
