@@ -1,14 +1,30 @@
+parameters:
+  - name: VSCODE_PUBLISH
+    type: boolean
+  - name: VSCODE_QUALITY
+    type: string
+  - name: VSCODE_RUN_UNIT_TESTS
+    type: boolean
+    default: true
+  - name: VSCODE_RUN_INTEGRATION_TESTS
+    type: boolean
+    default: true
+  - name: VSCODE_RUN_SMOKE_TESTS
+    type: boolean
+    default: true
+
 steps:
   - task: NodeTool@0
     inputs:
       versionSpec: "16.x"
 
-  - task: AzureKeyVault@1
-    displayName: "Azure Key Vault: Get Secrets"
-    inputs:
-      azureSubscription: "vscode-builds-subscription"
-      KeyVaultName: vscode
-      SecretsFilter: "github-distro-mixin-password,macos-developer-certificate,macos-developer-certificate-key"
+  - ${{ if ne(parameters.VSCODE_QUALITY, 'oss') }}:
+    - task: AzureKeyVault@1
+      displayName: "Azure Key Vault: Get Secrets"
+      inputs:
+        azureSubscription: "vscode-builds-subscription"
+        KeyVaultName: vscode
+        SecretsFilter: "github-distro-mixin-password,macos-developer-certificate,macos-developer-certificate-key"
 
   - task: DownloadPipelineArtifact@2
     inputs:
@@ -21,30 +37,33 @@ steps:
       tar -xzf $(Build.ArtifactStagingDirectory)/compilation.tar.gz
     displayName: Extract compilation output
 
-  - script: |
-      set -e
-      cat << EOF > ~/.netrc
-      machine github.com
-      login vscode
-      password $(github-distro-mixin-password)
-      EOF
+  - ${{ if ne(parameters.VSCODE_QUALITY, 'oss') }}:
+    - script: |
+        set -e
+        cat << EOF > ~/.netrc
+        machine github.com
+        login vscode
+        password $(github-distro-mixin-password)
+        EOF
 
-      git config user.email "vscode@microsoft.com"
-      git config user.name "VSCode"
-    displayName: Prepare tooling
+        git config user.email "vscode@microsoft.com"
+        git config user.name "VSCode"
+      displayName: Prepare tooling
 
-  - script: |
-      set -e
-      git fetch https://github.com/$(VSCODE_MIXIN_REPO).git $VSCODE_DISTRO_REF
-      echo "##vso[task.setvariable variable=VSCODE_DISTRO_COMMIT;]$(git rev-parse FETCH_HEAD)"
-      git checkout FETCH_HEAD
-    condition: and(succeeded(), ne(variables.VSCODE_DISTRO_REF, ' '))
-    displayName: Checkout override commit
+  - ${{ if ne(parameters.VSCODE_QUALITY, 'oss') }}:
+    - script: |
+        set -e
+        git fetch https://github.com/$(VSCODE_MIXIN_REPO).git $VSCODE_DISTRO_REF
+        echo "##vso[task.setvariable variable=VSCODE_DISTRO_COMMIT;]$(git rev-parse FETCH_HEAD)"
+        git checkout FETCH_HEAD
+      condition: and(succeeded(), ne(variables.VSCODE_DISTRO_REF, ' '))
+      displayName: Checkout override commit
 
-  - script: |
-      set -e
-      git pull --no-rebase https://github.com/$(VSCODE_MIXIN_REPO).git $(node -p "require('./package.json').distro")
-    displayName: Merge distro
+  - ${{ if ne(parameters.VSCODE_QUALITY, 'oss') }}:
+    - script: |
+        set -e
+        git pull --no-rebase https://github.com/$(VSCODE_MIXIN_REPO).git $(node -p "require('./package.json').distro")
+      displayName: Merge distro
 
   - script: |
       mkdir -p .build
@@ -107,11 +126,12 @@ steps:
     condition: and(succeeded(), ne(variables.NODE_MODULES_RESTORED, 'true'))
     displayName: Create node_modules archive
 
-  # This script brings in the right resources (images, icons, etc) based on the quality (insiders, stable, exploration)
-  - script: |
-      set -e
-      node build/azure-pipelines/mixin
-    displayName: Mix in quality
+  - ${{ if ne(parameters.VSCODE_QUALITY, 'oss') }}:
+    # This script brings in the right resources (images, icons, etc) based on the quality (insiders, stable, exploration)
+    - script: |
+        set -e
+        node build/azure-pipelines/mixin
+      displayName: Mix in quality
 
   - script: |
       set -e
@@ -119,16 +139,24 @@ steps:
         yarn gulp vscode-darwin-$(VSCODE_ARCH)-min-ci
     displayName: Build client
 
-  - script: |
-      set -e
-      node build/azure-pipelines/mixin --server
-    displayName: Mix in server quality
+  - ${{ if ne(parameters.VSCODE_QUALITY, 'oss') }}:
+    - script: |
+        set -e
+        node build/azure-pipelines/mixin --server
+      displayName: Mix in server quality
 
   - script: |
       set -e
       VSCODE_MIXIN_PASSWORD="$(github-distro-mixin-password)" \
         yarn gulp vscode-reh-darwin-$(VSCODE_ARCH)-min-ci vscode-reh-web-darwin-$(VSCODE_ARCH)-min-ci
     displayName: Build Server
+
+  - ${{ if or(eq(parameters.VSCODE_RUN_UNIT_TESTS, true), eq(parameters.VSCODE_RUN_INTEGRATION_TESTS, true), eq(parameters.VSCODE_RUN_SMOKE_TESTS, true)) }}:
+    - template: product-build-darwin-test-2.yml
+      parameters:
+        VSCODE_RUN_UNIT_TESTS: ${{ parameters.VSCODE_RUN_UNIT_TESTS }}
+        VSCODE_RUN_INTEGRATION_TESTS: ${{ parameters.VSCODE_RUN_INTEGRATION_TESTS }}
+        VSCODE_RUN_SMOKE_TESTS: ${{ parameters.VSCODE_RUN_SMOKE_TESTS }}
 
   # Setting hardened entitlements is a requirement for:
   # * Apple notarization
@@ -171,49 +199,51 @@ steps:
     artifact: vscode_web_darwin_$(VSCODE_ARCH)_archive-unsigned
     displayName: Publish web server archive
 
-  - task: AzureCLI@2
-    inputs:
-      azureSubscription: "vscode-builds-subscription"
-      scriptType: pscore
-      scriptLocation: inlineScript
-      addSpnToEnvironment: true
-      inlineScript: |
-        Write-Host "##vso[task.setvariable variable=AZURE_TENANT_ID]$env:tenantId"
-        Write-Host "##vso[task.setvariable variable=AZURE_CLIENT_ID]$env:servicePrincipalId"
-        Write-Host "##vso[task.setvariable variable=AZURE_CLIENT_SECRET;issecret=true]$env:servicePrincipalKey"
+  - ${{ if eq(parameters.VSCODE_PUBLISH, true) }}:
+    - task: AzureCLI@2
+      inputs:
+        azureSubscription: "vscode-builds-subscription"
+        scriptType: pscore
+        scriptLocation: inlineScript
+        addSpnToEnvironment: true
+        inlineScript: |
+          Write-Host "##vso[task.setvariable variable=AZURE_TENANT_ID]$env:tenantId"
+          Write-Host "##vso[task.setvariable variable=AZURE_CLIENT_ID]$env:servicePrincipalId"
+          Write-Host "##vso[task.setvariable variable=AZURE_CLIENT_SECRET;issecret=true]$env:servicePrincipalKey"
 
-  - script: |
-      set -e
-      AZURE_STORAGE_ACCOUNT="ticino" \
-      AZURE_TENANT_ID="$(AZURE_TENANT_ID)" \
-      AZURE_CLIENT_ID="$(AZURE_CLIENT_ID)" \
-      AZURE_CLIENT_SECRET="$(AZURE_CLIENT_SECRET)" \
-      VSCODE_ARCH="$(VSCODE_ARCH)" \
-        node build/azure-pipelines/upload-configuration
-    displayName: Upload configuration (for Bing settings search)
-    condition: and(succeeded(), eq(variables['VSCODE_ARCH'], 'x64'), ne(variables['VSCODE_PUBLISH'], 'false'))
-    continueOnError: true
+  - ${{ if eq(parameters.VSCODE_PUBLISH, true) }}:
+    - script: |
+        set -e
+        AZURE_STORAGE_ACCOUNT="ticino" \
+        AZURE_TENANT_ID="$(AZURE_TENANT_ID)" \
+        AZURE_CLIENT_ID="$(AZURE_CLIENT_ID)" \
+        AZURE_CLIENT_SECRET="$(AZURE_CLIENT_SECRET)" \
+        VSCODE_ARCH="$(VSCODE_ARCH)" \
+          node build/azure-pipelines/upload-configuration
+      displayName: Upload configuration (for Bing settings search)
+      condition: and(succeeded(), eq(variables['VSCODE_ARCH'], 'x64'))
+      continueOnError: true
 
-  - task: AzureArtifacts.manifest-generator-task.manifest-generator-task.ManifestGeneratorTask@0
-    displayName: Generate SBOM (client)
-    inputs:
-      BuildDropPath: $(agent.builddirectory)/VSCode-darwin-$(VSCODE_ARCH)
-      PackageName: Visual Studio Code
-    condition: and(succeeded(), ne(variables['VSCODE_PUBLISH'], 'false'))
+  - ${{ if eq(parameters.VSCODE_PUBLISH, true) }}:
+    - task: AzureArtifacts.manifest-generator-task.manifest-generator-task.ManifestGeneratorTask@0
+      displayName: Generate SBOM (client)
+      inputs:
+        BuildDropPath: $(agent.builddirectory)/VSCode-darwin-$(VSCODE_ARCH)
+        PackageName: Visual Studio Code
 
-  - publish: $(agent.builddirectory)/VSCode-darwin-$(VSCODE_ARCH)/_manifest
-    displayName: Publish SBOM (client)
-    artifact: vscode_client_darwin_$(VSCODE_ARCH)_sbom
-    condition: and(succeeded(), ne(variables['VSCODE_PUBLISH'], 'false'))
+  - ${{ if eq(parameters.VSCODE_PUBLISH, true) }}:
+    - publish: $(agent.builddirectory)/VSCode-darwin-$(VSCODE_ARCH)/_manifest
+      displayName: Publish SBOM (client)
+      artifact: vscode_client_darwin_$(VSCODE_ARCH)_sbom
 
-  - task: AzureArtifacts.manifest-generator-task.manifest-generator-task.ManifestGeneratorTask@0
-    displayName: Generate SBOM (server)
-    inputs:
-      BuildDropPath: $(agent.builddirectory)/vscode-server-darwin-$(VSCODE_ARCH)
-      PackageName: Visual Studio Code Server
-    condition: and(succeeded(), ne(variables['VSCODE_PUBLISH'], 'false'))
+  - ${{ if eq(parameters.VSCODE_PUBLISH, true) }}:
+    - task: AzureArtifacts.manifest-generator-task.manifest-generator-task.ManifestGeneratorTask@0
+      displayName: Generate SBOM (server)
+      inputs:
+        BuildDropPath: $(agent.builddirectory)/vscode-server-darwin-$(VSCODE_ARCH)
+        PackageName: Visual Studio Code Server
 
-  - publish: $(agent.builddirectory)/vscode-server-darwin-$(VSCODE_ARCH)/_manifest
-    displayName: Publish SBOM (server)
-    artifact: vscode_server_darwin_$(VSCODE_ARCH)_sbom
-    condition: and(succeeded(), ne(variables['VSCODE_PUBLISH'], 'false'))
+  - ${{ if eq(parameters.VSCODE_PUBLISH, true) }}:
+    - publish: $(agent.builddirectory)/vscode-server-darwin-$(VSCODE_ARCH)/_manifest
+      displayName: Publish SBOM (server)
+      artifact: vscode_server_darwin_$(VSCODE_ARCH)_sbom
