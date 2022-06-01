@@ -1,4 +1,7 @@
 steps:
+  - checkout: self
+    fetchDepth: 1
+
   - task: NodeTool@0
     inputs:
       versionSpec: "16.x"
@@ -10,54 +13,49 @@ steps:
       KeyVaultName: vscode
       SecretsFilter: "github-distro-mixin-password,ESRP-PKI,esrp-aad-username,esrp-aad-password"
 
-  - script: |
-      set -e
-      cat << EOF > ~/.netrc
-      machine github.com
-      login vscode
-      password $(github-distro-mixin-password)
-      EOF
+  # - script: |
+  #     set -e
+  #     cat << EOF > ~/.netrc
+  #     machine github.com
+  #     login vscode
+  #     password $(github-distro-mixin-password)
+  #     EOF
 
-      git config user.email "vscode@microsoft.com"
-      git config user.name "VSCode"
-    displayName: Prepare tooling
-
-  - script: |
-      set -e
-      git fetch https://github.com/$(VSCODE_MIXIN_REPO).git $VSCODE_DISTRO_REF
-      echo "##vso[task.setvariable variable=VSCODE_DISTRO_COMMIT;]$(git rev-parse FETCH_HEAD)"
-      git checkout FETCH_HEAD
-    condition: and(succeeded(), ne(variables.VSCODE_DISTRO_REF, ' '))
-    displayName: Checkout override commit
-
-  - script: |
-      set -e
-      git pull --no-rebase https://github.com/$(VSCODE_MIXIN_REPO).git $(node -p "require('./package.json').distro")
-    displayName: Merge distro
+  #     git config user.email "vscode@microsoft.com"
+  #     git config user.name "VSCode"
+  #   displayName: Prepare tooling
 
   # - script: |
   #     set -e
-  #     npx https://aka.ms/enablesecurefeed standAlone
-  #   timeoutInMinutes: 5
-  #   retryCountOnTaskFailure: 3
-  #   condition: and(succeeded(), eq(variables['ENABLE_TERRAPIN'], 'true'))
-  #   displayName: Switch to Terrapin packages
+  #     git fetch https://github.com/$(VSCODE_MIXIN_REPO).git $VSCODE_DISTRO_REF
+  #     echo "##vso[task.setvariable variable=VSCODE_DISTRO_COMMIT;]$(git rev-parse FETCH_HEAD)"
+  #     git checkout FETCH_HEAD
+  #   condition: and(succeeded(), ne(variables.VSCODE_DISTRO_REF, ' '))
+  #   displayName: Checkout override commit
 
   # - script: |
   #     set -e
-  #     for i in {1..3}; do # try 3 times, for Terrapin
-  #       yarn --cwd build --frozen-lockfile --check-files && break
-  #       if [ $i -eq 3 ]; then
-  #         echo "Yarn failed too many times" >&2
-  #         exit 1
-  #       fi
-  #       echo "Yarn failed $i, trying again..."
-  #     done
-  #   displayName: Install build dependencies
+  #     git pull --no-rebase https://github.com/$(VSCODE_MIXIN_REPO).git $(node -p "require('./package.json').distro")
+  #   displayName: Merge distro
 
   - script: |
       set -e
-      yarn add tmp --cwd build
+      npx https://aka.ms/enablesecurefeed standAlone
+    timeoutInMinutes: 5
+    retryCountOnTaskFailure: 3
+    condition: and(succeeded(), eq(variables['ENABLE_TERRAPIN'], 'true'))
+    displayName: Switch to Terrapin packages
+
+  - script: |
+      set -e
+      for i in {1..3}; do # try 3 times, for Terrapin
+        yarn --cwd build --frozen-lockfile --check-files && break
+        if [ $i -eq 3 ]; then
+          echo "Yarn failed too many times" >&2
+          exit 1
+        fi
+        echo "Yarn failed $i, trying again..."
+      done
     displayName: Install build dependencies
 
   - download: current
