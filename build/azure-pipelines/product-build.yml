@@ -484,7 +484,15 @@ stages:
         variables:
           BUILDSECMON_OPT_IN: true
         jobs:
-          - ${{ if eq(parameters.VSCODE_BUILD_MACOS, true) }}:
+          - ${{ if and(eq(parameters.VSCODE_BUILD_MACOS, true), eq(variables['VSCODE_CIBUILD'], false)) }}:
+            - job: macOS
+              timeoutInMinutes: 60
+              variables:
+                VSCODE_ARCH: x64
+              steps:
+                - template: darwin/product-build-darwin.yml
+
+          - ${{ if and(eq(parameters.VSCODE_BUILD_MACOS, true), eq(parameters.VSCODE_STEP_ON_IT, false)) }}:
               - job: macOSUnitTest
                 displayName: macOS (Unit Tests)
                 timeoutInMinutes: 60
@@ -522,58 +530,54 @@ stages:
                       VSCODE_RUN_INTEGRATION_TESTS: false
                       VSCODE_RUN_SMOKE_TESTS: true
 
-              - ${{ if eq(variables['VSCODE_CIBUILD'], false) }}:
-                  - job: macOS
-                    timeoutInMinutes: 90
-                    variables:
-                      VSCODE_ARCH: x64
-                    steps:
-                      - template: darwin/product-build-darwin.yml
-                  - job: macOSSign
-                    dependsOn:
-                      - macOS
-                    timeoutInMinutes: 90
-                    variables:
-                      VSCODE_ARCH: x64
-                    steps:
-                      - template: darwin/product-build-darwin-sign.yml
+          - ${{ if and(eq(parameters.VSCODE_BUILD_MACOS, true), eq(variables['VSCODE_PUBLISH'], true)) }}:
+            - job: macOSSign
+              dependsOn:
+                - macOS
+              timeoutInMinutes: 60
+              variables:
+                VSCODE_ARCH: x64
+              steps:
+                - template: darwin/product-build-darwin-sign.yml
 
-          - ${{ if and(eq(variables['VSCODE_CIBUILD'], false), eq(parameters.VSCODE_BUILD_MACOS_ARM64, true)) }}:
+          - ${{ if and(eq(parameters.VSCODE_BUILD_MACOS_ARM64, true), eq(variables['VSCODE_CIBUILD'], false)) }}:
               - job: macOSARM64
-                timeoutInMinutes: 90
+                timeoutInMinutes: 60
                 variables:
                   VSCODE_ARCH: arm64
                 steps:
                   - template: darwin/product-build-darwin.yml
-              - ${{ if eq(variables['VSCODE_CIBUILD'], false) }}:
-                  - job: macOSARM64Sign
-                    dependsOn:
-                      - macOSARM64
-                    timeoutInMinutes: 90
-                    variables:
-                      VSCODE_ARCH: arm64
-                    steps:
-                      - template: darwin/product-build-darwin-sign.yml
 
-          - ${{ if and(eq(variables['VSCODE_CIBUILD'], false), eq(variables['VSCODE_BUILD_MACOS_UNIVERSAL'], true)) }}:
+          - ${{ if and(eq(parameters.VSCODE_BUILD_MACOS_ARM64, true), eq(variables['VSCODE_PUBLISH'], true)) }}:
+              - job: macOSARM64Sign
+                dependsOn:
+                  - macOSARM64
+                timeoutInMinutes: 60
+                variables:
+                  VSCODE_ARCH: arm64
+                steps:
+                  - template: darwin/product-build-darwin-sign.yml
+
+          - ${{ if and(eq(variables['VSCODE_BUILD_MACOS_UNIVERSAL'], true), eq(variables['VSCODE_CIBUILD'], false)) }}:
               - job: macOSUniversal
                 dependsOn:
                   - macOS
                   - macOSARM64
-                timeoutInMinutes: 90
+                timeoutInMinutes: 60
                 variables:
                   VSCODE_ARCH: universal
                 steps:
                   - template: darwin/product-build-darwin-universal.yml
-              - ${{ if eq(variables['VSCODE_CIBUILD'], false) }}:
-                  - job: macOSUniversalSign
-                    dependsOn:
-                      - macOSUniversal
-                    timeoutInMinutes: 90
-                    variables:
-                      VSCODE_ARCH: universal
-                    steps:
-                      - template: darwin/product-build-darwin-sign.yml
+
+          - ${{ if and(eq(variables['VSCODE_BUILD_MACOS_UNIVERSAL'], true), eq(variables['VSCODE_PUBLISH'], true)) }}:
+              - job: macOSUniversalSign
+                dependsOn:
+                  - macOSUniversal
+                timeoutInMinutes: 60
+                variables:
+                  VSCODE_ARCH: universal
+                steps:
+                  - template: darwin/product-build-darwin-sign.yml
 
   - ${{ if and(eq(parameters.VSCODE_COMPILE_ONLY, false), ne(variables['VSCODE_PUBLISH'], 'false')) }}:
       - stage: Publish
