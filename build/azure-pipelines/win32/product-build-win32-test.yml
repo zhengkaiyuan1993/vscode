@@ -102,6 +102,7 @@ steps:
         exec {.\build\azure-pipelines\win32\listprocesses.bat }
       displayName: Diagnostics before smoke test run
       continueOnError: true
+      condition: succeededOrFailed()
 
   - ${{ if eq(parameters.VSCODE_RUN_SMOKE_TESTS, true) }}:
     - powershell: |
@@ -138,6 +139,7 @@ steps:
         exec {.\build\azure-pipelines\win32\listprocesses.bat }
       displayName: Diagnostics after smoke test run
       continueOnError: true
+      condition: succeededOrFailed()
 
   - task: PublishPipelineArtifact@0
     inputs:
@@ -163,9 +165,11 @@ steps:
       targetPath: .build\logs
     displayName: "Publish Log Files"
     continueOnError: true
+    condition: failed()
 
   - task: PublishTestResults@2
     displayName: Publish Tests Results
     inputs:
       testResultsFiles: "*-results.xml"
       searchFolder: "$(Build.ArtifactStagingDirectory)/test-results"
+    condition: succeededOrFailed()
