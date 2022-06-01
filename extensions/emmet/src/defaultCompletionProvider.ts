@@ -59,7 +59,7 @@ export class DefaultCompletionItemProvider implements vscode.CompletionItemProvi
 
 		let syntax = emmetMode;
 
-		let validateLocation = syntax === 'html' || syntax === 'jsx' || syntax === 'xml';
+		let validateLocation = !isStyleSheet(syntax);
 		let rootNode: Node | undefined;
 		let currentNode: Node | undefined;
 
