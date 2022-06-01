@@ -200,7 +200,7 @@ stages:
           - Compile
         pool: vscode-1es-windows
         jobs:
-          - ${{ if and(eq(parameters.VSCODE_BUILD_WIN32, true), eq(variables['VSCODE_PUBLISH'], true)) }}:
+          - ${{ if and(eq(parameters.VSCODE_BUILD_WIN32, true), eq(variables['VSCODE_CIBUILD'], false)) }}:
               - job: Windows
                 timeoutInMinutes: 60
                 variables:
@@ -208,7 +208,7 @@ stages:
                 steps:
                   - template: win32/product-build-win32.yml
                     parameters:
-                      VSCODE_PUBLISH: true
+                      VSCODE_PUBLISH: ${{ variables.VSCODE_PUBLISH }}
                       VSCODE_QUALITY: ${{ variables.VSCODE_QUALITY }}
                       VSCODE_RUN_UNIT_TESTS: false
                       VSCODE_RUN_INTEGRATION_TESTS: false
@@ -228,8 +228,6 @@ stages:
                       VSCODE_RUN_UNIT_TESTS: true
                       VSCODE_RUN_INTEGRATION_TESTS: false
                       VSCODE_RUN_SMOKE_TESTS: false
-
-          - ${{ if and(eq(parameters.VSCODE_BUILD_WIN32, true), eq(parameters.VSCODE_STEP_ON_IT, false)) }}:
               - job: WindowsIntegrationTests
                 displayName: Windows (Integration Tests)
                 timeoutInMinutes: 60
@@ -243,8 +241,6 @@ stages:
                       VSCODE_RUN_UNIT_TESTS: false
                       VSCODE_RUN_INTEGRATION_TESTS: true
                       VSCODE_RUN_SMOKE_TESTS: false
-
-          - ${{ if and(eq(parameters.VSCODE_BUILD_WIN32, true), eq(parameters.VSCODE_STEP_ON_IT, false)) }}:
               - job: WindowsSmokeTests
                 displayName: Windows (Smoke Tests)
                 timeoutInMinutes: 60
@@ -259,7 +255,7 @@ stages:
                       VSCODE_RUN_INTEGRATION_TESTS: false
                       VSCODE_RUN_SMOKE_TESTS: true
 
-          - ${{ if and(eq(parameters.VSCODE_BUILD_WIN32_32BIT, true), eq(variables['VSCODE_PUBLISH'], true)) }}:
+          - ${{ if and(eq(parameters.VSCODE_BUILD_WIN32_32BIT, true), eq(variables['VSCODE_CIBUILD'], false)) }}:
               - job: Windows32
                 timeoutInMinutes: 60
                 variables:
@@ -267,7 +263,7 @@ stages:
                 steps:
                   - template: win32/product-build-win32.yml
                     parameters:
-                      VSCODE_PUBLISH: true
+                      VSCODE_PUBLISH: ${{ variables.VSCODE_PUBLISH }}
                       VSCODE_QUALITY: ${{ variables.VSCODE_QUALITY }}
                       VSCODE_RUN_UNIT_TESTS: false
                       VSCODE_RUN_INTEGRATION_TESTS: false
@@ -287,8 +283,6 @@ stages:
                       VSCODE_RUN_UNIT_TESTS: true
                       VSCODE_RUN_INTEGRATION_TESTS: false
                       VSCODE_RUN_SMOKE_TESTS: false
-
-          - ${{ if and(eq(parameters.VSCODE_BUILD_WIN32_32BIT, true), eq(parameters.VSCODE_STEP_ON_IT, false)) }}:
               - job: Windows32IntegrationTests
                 displayName: Windows32 (Integration Tests)
                 timeoutInMinutes: 60
@@ -302,8 +296,6 @@ stages:
                       VSCODE_RUN_UNIT_TESTS: false
                       VSCODE_RUN_INTEGRATION_TESTS: true
                       VSCODE_RUN_SMOKE_TESTS: false
-
-          - ${{ if and(eq(parameters.VSCODE_BUILD_WIN32_32BIT, true), eq(parameters.VSCODE_STEP_ON_IT, false)) }}:
               - job: Windows32SmokeTests
                 displayName: Windows32 (Smoke Tests)
                 timeoutInMinutes: 60
@@ -318,7 +310,7 @@ stages:
                       VSCODE_RUN_INTEGRATION_TESTS: false
                       VSCODE_RUN_SMOKE_TESTS: true
 
-          - ${{ if and(eq(parameters.VSCODE_BUILD_WIN32_ARM64, true), eq(variables['VSCODE_PUBLISH'], true)) }}:
+          - ${{ if and(eq(parameters.VSCODE_BUILD_WIN32_ARM64, true), eq(variables['VSCODE_CIBUILD'], false)) }}:
               - job: WindowsARM64
                 timeoutInMinutes: 60
                 variables:
@@ -326,7 +318,7 @@ stages:
                 steps:
                   - template: win32/product-build-win32.yml
                     parameters:
-                      VSCODE_PUBLISH: true
+                      VSCODE_PUBLISH: ${{ variables.VSCODE_PUBLISH }}
                       VSCODE_QUALITY: ${{ variables.VSCODE_QUALITY }}
                       VSCODE_RUN_UNIT_TESTS: false
                       VSCODE_RUN_INTEGRATION_TESTS: false
