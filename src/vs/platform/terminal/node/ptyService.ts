@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { execFile } from 'child_process';
-import { AutoOpenBarrier, ProcessTimeRunOnceScheduler, Promises, Queue } from 'vs/base/common/async';
+import { AutoOpenBarrier, RunOnceScheduler, Promises, Queue } from 'vs/base/common/async';
 import { Emitter, Event } from 'vs/base/common/event';
 import { Disposable, toDisposable } from 'vs/base/common/lifecycle';
 import { IProcessEnvironment, isWindows, OperatingSystem, OS } from 'vs/base/common/platform';
@@ -420,8 +420,8 @@ export class PersistentTerminalProcess extends Disposable {
 	private _orphanQuestionBarrier: AutoOpenBarrier | null;
 	private _orphanQuestionReplyTime: number;
 	private _orphanRequestQueue = new Queue<boolean>();
-	private _disconnectRunner1: ProcessTimeRunOnceScheduler;
-	private _disconnectRunner2: ProcessTimeRunOnceScheduler;
+	private _disconnectRunner1: RunOnceScheduler;
+	private _disconnectRunner2: RunOnceScheduler;
 
 	private readonly _onProcessReplay = this._register(new Emitter<IPtyHostProcessReplayEvent>());
 	readonly onProcessReplay = this._onProcessReplay.event;
@@ -507,11 +507,11 @@ export class PersistentTerminalProcess extends Disposable {
 		this._fixedDimensions = fixedDimensions;
 		this._orphanQuestionBarrier = null;
 		this._orphanQuestionReplyTime = 0;
-		this._disconnectRunner1 = this._register(new ProcessTimeRunOnceScheduler(() => {
+		this._disconnectRunner1 = this._register(new RunOnceScheduler(() => {
 			this._logService.info(`Persistent process "${this._persistentProcessId}": The reconnection grace time of ${printTime(reconnectConstants.graceTime)} has expired, shutting down pid "${this._pid}"`);
 			this.shutdown(true);
 		}, reconnectConstants.graceTime));
-		this._disconnectRunner2 = this._register(new ProcessTimeRunOnceScheduler(() => {
+		this._disconnectRunner2 = this._register(new RunOnceScheduler(() => {
 			this._logService.info(`Persistent process "${this._persistentProcessId}": The short reconnection grace time of ${printTime(reconnectConstants.shortGraceTime)} has expired, shutting down pid ${this._pid}`);
 			this.shutdown(true);
 		}, reconnectConstants.shortGraceTime));
