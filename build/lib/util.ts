@@ -418,7 +418,7 @@ export function acquireWebNodePaths() {
 	return nodePaths;
 }
 
-export function createExternalLoaderConfig(webEndpoint?: string, commit?: string, quality?: string) {
+export function createExternalLoaderConfig(webEndpoint?: string, commit?: string, quality?: string, nlsBaseUrl?: string) {
 	if (!webEndpoint || !commit || !quality) {
 		return undefined;
 	}
@@ -427,10 +427,13 @@ export function createExternalLoaderConfig(webEndpoint?: string, commit?: string
 	Object.keys(nodePaths).map(function (key, _) {
 		nodePaths[key] = `${webEndpoint}/node_modules/${key}/${nodePaths[key]}`;
 	});
+
+	const nlsConfig = nlsBaseUrl ? { 'vs/nls': { baseUrl: nlsBaseUrl } } : {};
 	const externalLoaderConfig = {
 		baseUrl: `${webEndpoint}/out`,
 		recordStats: true,
-		paths: nodePaths
+		paths: nodePaths,
+		...nlsConfig,
 	};
 	return externalLoaderConfig;
 }

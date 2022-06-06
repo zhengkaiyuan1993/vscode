@@ -29,6 +29,8 @@ const { compileExtensionsBuildTask, compileExtensionMediaBuildTask } = require('
 const { vscodeWebEntryPoints, vscodeWebResourceIncludes, createVSCodeWebFileContentMapper } = require('./gulpfile.vscode.web');
 const cp = require('child_process');
 
+const quality = product.quality;
+const version = (quality && quality !== 'stable') ? `${packageJson.version}-${quality}` : packageJson.version;
 const REPO_ROOT = path.dirname(__dirname);
 const commit = util.getVersion(REPO_ROOT);
 const BUILD_ROOT = path.dirname(REPO_ROOT);
@@ -238,13 +240,6 @@ function packageTask(type, platform, arch, sourceFolderName, destinationFolderNa
 		const sources = es.merge(src, extensions, extensionsCommonDependencies)
 			.pipe(filter(['**', '!**/*.js.map'], { dot: true }));
 
-		let version = packageJson.version;
-		const quality = product.quality;
-
-		if (quality && quality !== 'stable') {
-			version += '-' + quality;
-		}
-
 		const name = product.nameShort;
 		const packageJsonStream = gulp.src(['remote/package.json'], { base: 'remote' })
 			.pipe(json({ name, version, dependencies: undefined, optionalDependencies: undefined }));
@@ -352,6 +347,14 @@ function tweakProductForServerWeb(product) {
 	return result;
 }
 
+let nlsBaseUrl = product.extensionsGallery?.nlsBaseUrl;
+if (nlsBaseUrl) {
+	if (!nlsBaseUrl.endsWith('/')) {
+		nlsBaseUrl += '/';
+	}
+	nlsBaseUrl = `${nlsBaseUrl}${commit}/${version}/`;
+}
+
 ['reh', 'reh-web'].forEach(type => {
 	const optimizeTask = task.define(`optimize-vscode-${type}`, task.series(
 		util.rimraf(`out-vscode-${type}`),
@@ -361,6 +364,7 @@ function tweakProductForServerWeb(product) {
 			otherSources: [],
 			resources: type === 'reh' ? serverResources : serverWithWebResources,
 			loaderConfig: common.loaderConfig(),
+			externalLoaderInfo: util.createExternalLoaderConfig(product.webEndpointUrl, commit, quality, nlsBaseUrl),
 			out: `out-vscode-${type}`,
 			inlineAmdImages: true,
 			bundleInfo: undefined,

@@ -45,11 +45,12 @@
 		const nlsConfig = {};
 		const locale = window.localStorage.getItem('vscode.nls.locale') || navigator.language;
 		if (!locale.startsWith('en')) {
+			const currentConfig = require.getConfig()['vs/nls'] || {};
 			nlsConfig['vs/nls'] = {
+				...currentConfig,
 				availableLanguages: {
 					'*': locale
-				},
-				baseUrl: '{{WORKBENCH_NLS_BASE_URL}}'
+				}
 			};
 		}
 

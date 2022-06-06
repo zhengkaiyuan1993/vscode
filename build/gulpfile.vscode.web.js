@@ -151,6 +151,14 @@ const createVSCodeWebFileContentMapper = (extensionsRoot, product) => {
 };
 exports.createVSCodeWebFileContentMapper = createVSCodeWebFileContentMapper;
 
+let nlsBaseUrl = product.extensionsGallery?.nlsBaseUrl;
+if (nlsBaseUrl) {
+	if (!nlsBaseUrl.endsWith('/')) {
+		nlsBaseUrl += '/';
+	}
+	nlsBaseUrl = `${nlsBaseUrl}${commit}/${version}/`;
+}
+
 const optimizeVSCodeWebTask = task.define('optimize-vscode-web', task.series(
 	util.rimraf('out-vscode-web'),
 	common.optimizeTask({
@@ -159,7 +167,7 @@ const optimizeVSCodeWebTask = task.define('optimize-vscode-web', task.series(
 		otherSources: [],
 		resources: vscodeWebResources,
 		loaderConfig: common.loaderConfig(),
-		externalLoaderInfo: util.createExternalLoaderConfig(product.webEndpointUrl, commit, quality),
+		externalLoaderInfo: util.createExternalLoaderConfig(product.webEndpointUrl, commit, quality, nlsBaseUrl),
 		out: 'out-vscode-web',
 		inlineAmdImages: true,
 		bundleInfo: undefined,
