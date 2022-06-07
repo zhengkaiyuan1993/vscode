@@ -3,6 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import * as nls from 'vs/nls';
+
 const LANGUAGE_DEFAULT = 'en';
 
 let _isWindows = false;
@@ -82,16 +84,17 @@ if (typeof navigator === 'object' && !isElectronRenderer) {
 	_isWeb = true;
 
 	// Gather loader configuration since that contains the locale
-	let loaderConfiguration: any = null;
-	if (typeof globals.require !== 'undefined' && typeof globals.require.getConfig === 'function') {
-		// Get the configuration from the Monaco AMD Loader
-		loaderConfiguration = globals.require.getConfig();
-	} else if (typeof globals.requirejs !== 'undefined') {
-		// Get the configuration from requirejs
-		loaderConfiguration = globals.requirejs.s.contexts._.config;
-	}
-	const configuredLocale = loaderConfiguration?.['vs/nls']?.['availableLanguages']?.['*'] as string | undefined;
-	_locale = configuredLocale || navigator.language;
+	// let loaderConfiguration: any = null;
+	// if (typeof globals.require !== 'undefined' && typeof globals.require.getConfig === 'function') {
+	// 	// Get the configuration from the Monaco AMD Loader
+	// 	loaderConfiguration = globals.require.getConfig();
+	// } else if (typeof globals.requirejs !== 'undefined') {
+	// 	// Get the configuration from requirejs
+	// 	loaderConfiguration = globals.requirejs.s.contexts._.config;
+	// }
+	// const configuredLocale = loaderConfiguration?.['vs/nls']?.['availableLanguages']?.['*'] as string | undefined;
+	const configuredLocale = nls.getLanguageConfiguration();
+	_locale = configuredLocale?.['*'] || navigator.language;
 
 	_language = _locale;
 }

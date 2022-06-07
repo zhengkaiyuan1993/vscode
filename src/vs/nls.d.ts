@@ -23,3 +23,5 @@ export declare function localize(info: ILocalizeInfo, message: string, ...args: 
  * For example, `localize('sayHello', 'hello {0}', name)`
  */
 export declare function localize(key: string, message: string, ...args: (string | number | boolean | undefined | null)[]): string;
+
+export declare function getLanguageConfiguration(): { [entry: string]: string } | undefined;
