@@ -12,7 +12,7 @@ import { URI } from 'vs/base/common/uri';
 import { getSystemShell } from 'vs/base/node/shell';
 import { ILogService } from 'vs/platform/log/common/log';
 import { RequestStore } from 'vs/platform/terminal/common/requestStore';
-import { IProcessDataEvent, IProcessReadyEvent, IPtyService, IRawTerminalInstanceLayoutInfo, IReconnectConstants, IRequestResolveVariablesEvent, IShellLaunchConfig, ITerminalInstanceLayoutInfoById, ITerminalLaunchError, ITerminalsLayoutInfo, ITerminalTabLayoutInfoById, TerminalIcon, IProcessProperty, TitleEventSource, ProcessPropertyType, IProcessPropertyMap, IFixedTerminalDimensions, IPersistentTerminalProcessLaunchConfig, ICrossVersionSerializedTerminalState, ISerializedTerminalState, ITerminalProcessOptions } from 'vs/platform/terminal/common/terminal';
+import { IProcessDataEvent, IProcessReadyEvent, IPtyService, IRawTerminalInstanceLayoutInfo, IReconnectConstants, IRequestResolveVariablesEvent, IShellLaunchConfig, ITerminalInstanceLayoutInfoById, ITerminalLaunchError, ITerminalsLayoutInfo, ITerminalTabLayoutInfoById, TerminalIcon, IProcessProperty, TitleEventSource, ProcessPropertyType, IProcessPropertyMap, IFixedTerminalDimensions, IPersistentTerminalProcessLaunchConfig, ICrossVersionSerializedTerminalState, ISerializedTerminalState, ITerminalProcessOptions, OutputChannel, IOutputChannel } from 'vs/platform/terminal/common/terminal';
 import { TerminalDataBufferer } from 'vs/platform/terminal/common/terminalDataBuffering';
 import { escapeNonWindowsPath } from 'vs/platform/terminal/common/terminalEnvironment';
 import { Terminal as XtermTerminal } from 'xterm-headless';
@@ -35,6 +35,7 @@ let Unicode11Addon: typeof XtermUnicode11Addon;
 export class PtyService extends Disposable implements IPtyService {
 	declare readonly _serviceBrand: undefined;
 
+	private readonly _outputChannel: IOutputChannel;
 	private readonly _ptys: Map<number, PersistentTerminalProcess> = new Map();
 	private readonly _workspaceLayoutInfos = new Map<WorkspaceId, ISetTerminalLayoutInfoArgs>();
 	private readonly _detachInstanceRequestStore: RequestStore<IProcessDetails | undefined, { workspaceId: string; instanceId: number }>;
@@ -70,11 +71,13 @@ export class PtyService extends Disposable implements IPtyService {
 			for (const pty of this._ptys.values()) {
 				pty.shutdown(true);
 			}
+			this._outputChannel.appendLine('clearing ptys');
 			this._ptys.clear();
 		}));
-
+		this._outputChannel = new OutputChannel('PtyService', this._logService);
 		this._detachInstanceRequestStore = this._register(new RequestStore(undefined, this._logService));
 		this._detachInstanceRequestStore.onCreateRequest(this._onDidRequestDetach.fire, this._onDidRequestDetach);
+		this._outputChannel.appendLine('created ptyService');
 	}
 
 	async refreshIgnoreProcessNames(names: string[]): Promise<void> {
@@ -335,17 +338,21 @@ export class PtyService extends Disposable implements IPtyService {
 
 	async setTerminalLayoutInfo(args: ISetTerminalLayoutInfoArgs): Promise<void> {
 		this._workspaceLayoutInfos.set(args.workspaceId, args);
+		this._outputChannel.appendLine('set terminal layout info' + args.workspaceId);
 	}
 
 	async getTerminalLayoutInfo(args: IGetTerminalLayoutInfoArgs): Promise<ITerminalsLayoutInfo | undefined> {
 		const layout = this._workspaceLayoutInfos.get(args.workspaceId);
-		this._logService.trace('ptyService#getLayoutInfo', args);
+		this._logService.trace('ptyService#getLayoutInfo', args.workspaceId);
+		this._outputChannel.appendLine('get terminal layout info' + args.workspaceId);
 		if (layout) {
 			const expandedTabs = await Promise.all(layout.tabs.map(async tab => this._expandTerminalTab(tab)));
 			const tabs = expandedTabs.filter(t => t.terminals.length > 0);
 			this._logService.trace('ptyService#returnLayoutInfo', tabs);
+			this._outputChannel.appendLine('returning tabs' + JSON.stringify(tabs));
 			return { tabs };
 		}
+		this._outputChannel.appendLine('returning undefined for' + args.workspaceId);
 		return undefined;
 	}
 

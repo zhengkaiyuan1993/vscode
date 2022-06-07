@@ -7,9 +7,22 @@ import { Event } from 'vs/base/common/event';
 import { IProcessEnvironment, OperatingSystem } from 'vs/base/common/platform';
 import { URI, UriComponents } from 'vs/base/common/uri';
 import { createDecorator } from 'vs/platform/instantiation/common/instantiation';
+import { ILogService } from 'vs/platform/log/common/log';
 import { ITerminalCapabilityStore } from 'vs/platform/terminal/common/capabilities/capabilities';
 import { IGetTerminalLayoutInfoArgs, IProcessDetails, IPtyHostProcessReplayEvent, ISerializedCommandDetectionCapability, ISetTerminalLayoutInfoArgs } from 'vs/platform/terminal/common/terminalProcess';
 import { ThemeIcon } from 'vs/platform/theme/common/themeService';
+
+export interface IOutputChannel {
+	appendLine(msg: string): void;
+}
+
+export class OutputChannel implements IOutputChannel {
+	constructor(private prefix: string, @ILogService private readonly logService: ILogService) { }
+
+	appendLine(msg: string): void {
+		this.logService.debug(`${this.prefix}#search`, msg);
+	}
+}
 
 export const enum TerminalSettingPrefix {
 	Shell = 'terminal.integrated.shell.',
