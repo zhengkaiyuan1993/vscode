@@ -392,9 +392,9 @@ function tweakProductForServerWeb(product) {
 			gulp.task(serverTaskCI);
 
 			const serverTask = task.define(`vscode-${type}${dashed(platform)}${dashed(arch)}${dashed(minified)}`, task.series(
-				// compileBuildTask,
-				// compileExtensionsBuildTask,
-				// compileExtensionMediaBuildTask,
+				compileBuildTask,
+				compileExtensionsBuildTask,
+				compileExtensionMediaBuildTask,
 				minified ? minifyTask : optimizeTask,
 				serverTaskCI
 			));
