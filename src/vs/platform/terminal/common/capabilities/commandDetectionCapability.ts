@@ -136,21 +136,31 @@ export class CommandDetectionCapability implements ICommandDetectionCapability {
 			if (letter === term.length) {
 				console.log(`Found "${term}"! line: ${e.marker.line}, start: ${start}`);
 				if ('registerDecoration' in this._terminal) {
-					const d = (this._terminal as any).registerDecoration({
+					// Word outline
+					const borderDecoration = (this._terminal as any).registerDecoration({
 						marker: e.marker,
 						x: start,
 						width: term.length,
 						layer: 'top'
 					});
-					d.onRender((e: any) => {
-						e.style.border = '1px solid #f00';
-						const inner = document.createElement('div');
-						inner.classList.add('codicon-light-bulb', 'codicon');
-						inner.style.position = 'absolute';
-						inner.style.bottom = '100%';
-						inner.style.left = '0';
-						inner.style.color = '#ffcc00';
-						e.appendChild(inner);
+					let created = false;
+					borderDecoration.onRender((e: any) => {
+
+						e.style.background = `url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0%200%206%203'%20enable-background%3D'new%200%200%206%203'%20height%3D'3'%20width%3D'6'%3E%3Cg%20fill%3D'%23f14c4c'%3E%3Cpolygon%20points%3D'5.5%2C0%202.5%2C3%201.1%2C3%204.1%2C0'%2F%3E%3Cpolygon%20points%3D'4%2C0%206%2C2%206%2C0.6%205.4%2C0'%2F%3E%3Cpolygon%20points%3D'0%2C2%201%2C3%202.4%2C3%200%2C0.6'%2F%3E%3C%2Fg%3E%3C%2Fsvg%3E") repeat-x bottom left`;
+
+						// This should be on the terminal's cursor line or the one above it (assume a decoration is there?)
+						if (!created) {
+							// Create lightbulb on terminal element
+							const lightbulb = document.createElement('div');
+							lightbulb.classList.add('codicon-light-bulb', 'codicon');
+							lightbulb.style.marginLeft = '-17px';
+							lightbulb.style.backgroundColor = '#1E1E1E';
+							lightbulb.style.color = '#ffcc00';
+							lightbulb.style.position = 'absolute';
+							lightbulb.style.bottom = '23px';
+							(this._terminal as any).element.appendChild(lightbulb);
+							created = true;
+						}
 					});
 				}
 			}
