@@ -9,6 +9,7 @@ import { Emitter } from 'vs/base/common/event';
 import { ILogService } from 'vs/platform/log/common/log';
 import { ICommandDetectionCapability, TerminalCapability, ITerminalCommand } from 'vs/platform/terminal/common/capabilities/capabilities';
 import { ISerializedCommand, ISerializedCommandDetectionCapability } from 'vs/platform/terminal/common/terminalProcess';
+import { IBufferCell } from 'xterm';
 // Importing types is safe in any layer
 // eslint-disable-next-line code-import-patterns
 import type { IBuffer, IDisposable, IMarker, Terminal } from 'xterm-headless';
@@ -60,6 +61,8 @@ export class CommandDetectionCapability implements ICommandDetectionCapability {
 	private _onCursorMoveListener?: IDisposable;
 	private _commandMarkers: IMarker[] = [];
 	private _dimensions: ITerminalDimensions;
+	private _stringCommandListeners: Map<string, ((command: ITerminalCommand) => void)[]> = new Map();
+	private _regexpCommandFinishedListeners: { regexp: RegExp; callback: (command: ITerminalCommand) => void }[] = [];
 
 	get commands(): readonly ITerminalCommand[] { return this._commands; }
 	get executingCommand(): string | undefined { return this._currentCommand.command; }
@@ -94,6 +97,72 @@ export class CommandDetectionCapability implements ICommandDetectionCapability {
 		this._terminal.onResize(e => this._handleResize(e));
 		this._terminal.onCursorMove(() => this._handleCursorMove());
 		this._setupClearListeners();
+
+		this.registerCommandFinishedListener('gti', e => {
+			// Check exitCode is truthy
+			console.log('gti run, did you mean git?');
+			console.log('ITerminalCommand', e);
+
+			// Search for start of term
+			if (!e.marker?.line) {
+				return;
+			}
+			const line = this._terminal.buffer.active.getLine(e.marker.line);
+			if (!line) {
+				return;
+			}
+			const term = 'gti';
+			let start = 0;
+			let letter = 0;
+			let cell: IBufferCell | undefined;
+			for (let i = 0; i < line.length; i++) {
+				cell = line.getCell(i, cell);
+				if (!cell) {
+					continue;
+				}
+				if (cell.getChars() === term[letter]) {
+					if (letter === 0) {
+						start = i;
+					}
+					letter++;
+					if (letter === term.length) {
+						break;
+					}
+				} else {
+					letter = 0;
+				}
+				// if (line.getCell(start)?.getChars();
+			}
+			if (letter === term.length) {
+				console.log(`Found "${term}"! line: ${e.marker.line}, start: ${start}`);
+				if ('registerDecoration' in this._terminal) {
+					const d = (this._terminal as any).registerDecoration({
+						marker: e.marker,
+						x: start,
+						width: term.length,
+						layer: 'top'
+					});
+					d.onRender((e: any) => {
+						e.style.border = '1px solid #f00';
+						const inner = document.createElement('div');
+						inner.classList.add('codicon-light-bulb', 'codicon');
+						inner.style.position = 'absolute';
+						inner.style.bottom = '100%';
+						inner.style.left = '0';
+						inner.style.color = '#ffcc00';
+						e.appendChild(inner);
+					});
+				}
+			}
+
+			// console.log('output', e.getOutput());
+		});
+		this.registerCommandFinishedListener(/.+/, e => {
+			console.log('regexp listener for any');
+		});
+		this.registerCommandFinishedListener(/l.+/, e => {
+			console.log('regexp listener starting with l');
+		});
 	}
 
 	private _handleResize(e: { cols: number; rows: number }) {
@@ -432,6 +501,19 @@ export class CommandDetectionCapability implements ICommandDetectionCapability {
 			this._onBeforeCommandFinished.fire(newCommand);
 			if (!this._currentCommand.isInvalid) {
 				this._onCommandFinished.fire(newCommand);
+				// TODO: This wouldn't handle commands containing escaped spaces correctly
+				const command = newCommand.command.split(' ')[0];
+				const listeners = this._stringCommandListeners.get(command);
+				if (listeners) {
+					for (const listener of listeners) {
+						listener(newCommand);
+					}
+				}
+				for (const listener of this._regexpCommandFinishedListeners) {
+					if (command.match(listener.regexp)) {
+						listener.callback(newCommand);
+					}
+				}
 			}
 		}
 		this._currentCommand.previousCommandMarker = this._currentCommand.commandStartMarker;
@@ -550,6 +632,19 @@ export class CommandDetectionCapability implements ICommandDetectionCapability {
 			this._logService.debug('CommandDetectionCapability#onCommandFinished', newCommand);
 			this._onCommandFinished.fire(newCommand);
 		}
+	}
+
+	registerCommandFinishedListener(matcher: string | RegExp, callback: (command: ITerminalCommand) => void): IDisposable {
+		if (typeof matcher === 'string') {
+			const listeners = this._stringCommandListeners.get(matcher) || [];
+			listeners.push(callback);
+			this._stringCommandListeners.set(matcher, listeners);
+		} else {
+			this._regexpCommandFinishedListeners.push({ regexp: matcher, callback });
+		}
+
+		// TODO: Return disposable
+		return null as any;
 	}
 }
 
