@@ -54,6 +54,7 @@ import { ThemeIcon } from 'vs/platform/theme/common/themeService';
 import { formatMessageForTerminal } from 'vs/platform/terminal/common/terminalStrings';
 import { GroupKind } from 'vs/workbench/contrib/tasks/common/taskConfiguration';
 import { Codicon } from 'vs/base/common/codicons';
+import { IStorageService, StorageScope, StorageTarget } from 'vs/platform/storage/common/storage';
 
 const taskShellIntegrationStartSequence = '\x1b]633;A\x07' + '\x1b]633;P;Task=\x07' + '\x1b]633;B\x07';
 const taskShellIntegrationOutputSequence = '\x1b]633;C\x07';
@@ -61,6 +62,7 @@ const taskShellIntegrationOutputSequence = '\x1b]633;C\x07';
 interface ITerminalData {
 	terminal: ITerminalInstance;
 	lastTask: string;
+	lastTaskConfig?: { task: Task; resolver: ITaskResolver };
 	group?: string;
 }
 
@@ -229,6 +231,7 @@ export class TerminalTaskSystem extends Disposable implements ITaskSystem {
 		private _logService: ILogService,
 		private _configurationService: IConfigurationService,
 		private _notificationService: INotificationService,
+		private _storageService: IStorageService,
 		taskService: ITaskService,
 		taskSystemInfoResolver: ITaskSystemInfoResolver,
 	) {
@@ -244,6 +247,47 @@ export class TerminalTaskSystem extends Disposable implements ITaskSystem {
 		this._onDidStateChange = new Emitter();
 		this._taskSystemInfoResolver = taskSystemInfoResolver;
 		this._register(this._terminalStatusManager = new TaskTerminalStatus(taskService));
+		this._restoreTasks();
+		this._register(this._terminalService.onDidRequestTaskReconnection((terminalId) => {
+			const task = this._getTaskFromTerminal(terminalId);
+			if (task) {
+				this.run(task.task, task.resolver);
+			} else {
+				this._logService.debug(`Task could not be reconnected for terminal with ID: ${terminalId}`);
+			}
+		}));
+	}
+
+	private _saveState(): void {
+		this._storageService.store(`taskReconnection.activeTasks`, JSON.stringify(this._activeTasks), StorageScope.WORKSPACE, StorageTarget.USER);
+		this._storageService.store(`taskReconnection.busyTasks`, JSON.stringify(this._busyTasks), StorageScope.WORKSPACE, StorageTarget.USER);
+		this._storageService.store(`taskReconnection.terminals`, JSON.stringify(this._terminals), StorageScope.WORKSPACE, StorageTarget.USER);
+	}
+
+	private _restoreTasks(): void {
+		const activeTasks = this._storageService.get(`activeTasks`, StorageScope.WORKSPACE);
+		if (activeTasks) {
+			const tasks = JSON.parse(activeTasks);
+			this._activeTasks = tasks;
+		}
+		const busyTasks = this._storageService.get(`busyTasks`, StorageScope.WORKSPACE);
+		if (busyTasks) {
+			const tasks = JSON.parse(busyTasks);
+			this._busyTasks = tasks;
+		}
+		const terminals = this._storageService.get(`terminals`, StorageScope.WORKSPACE);
+		if (terminals) {
+			const tasks = JSON.parse(terminals);
+			this._terminals = tasks;
+		}
+	}
+
+	private _getTaskFromTerminal(id: number): { task: Task; resolver: ITaskResolver } | undefined {
+		const terminalData = Object.entries(this._terminals).find(t => t[1].terminal.instanceId === id);
+		if (terminalData?.[1].lastTaskConfig) {
+			return { task: terminalData?.[1].lastTaskConfig?.task, resolver: terminalData?.[1].lastTaskConfig?.resolver };
+		}
+		return undefined;
 	}
 
 	public get onDidStateChange(): Event<ITaskEvent> {
@@ -1342,6 +1386,7 @@ export class TerminalTaskSystem extends Disposable implements ITaskSystem {
 
 		const terminalKey = result.instanceId.toString();
 		result.onDisposed((terminal) => {
+			this._saveState();
 			const terminalData = this._terminals[terminalKey];
 			if (terminalData) {
 				delete this._terminals[terminalKey];
@@ -1358,7 +1403,8 @@ export class TerminalTaskSystem extends Disposable implements ITaskSystem {
 				}
 			}
 		});
-		this._terminals[terminalKey] = { terminal: result, lastTask: taskKey, group };
+		const lastVerifiedTask = this._lastTask?.getVerifiedTask();
+		this._terminals[terminalKey] = { terminal: result, lastTask: taskKey, group, lastTaskConfig: lastVerifiedTask ? { task: lastVerifiedTask.task, resolver: lastVerifiedTask.resolver } : undefined };
 		return [result, undefined];
 	}
 

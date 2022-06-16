@@ -147,6 +147,7 @@ export interface ITerminalService extends ITerminalInstanceHost {
 	onDidRegisterProcessSupport: Event<void>;
 	onDidChangeConnectionState: Event<void>;
 	onDidRequestHideFindWidget: Event<void>;
+	onDidRequestTaskReconnection: Event<number>;
 
 	/**
 	 * Creates a terminal.

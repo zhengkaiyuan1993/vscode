@@ -465,6 +465,11 @@ export interface IShellLaunchConfig {
 	attachPersistentProcess?: { id: number; pid: number; title: string; titleSource: TitleEventSource; cwd: string; icon?: TerminalIcon; color?: string; hasChildProcesses?: boolean; fixedDimensions?: IFixedTerminalDimensions; environmentVariableCollections?: ISerializableEnvironmentVariableCollections };
 
 	/**
+	 * There is an owner of this terminal for reconnection.
+	 */
+	reconnectionOwner?: boolean;
+
+	/**
 	 * Whether the terminal process environment should be exactly as provided in
 	 * `TerminalOptions.env`. When this is false (default), the environment will be based on the
 	 * window's environment and also apply configured platform settings like

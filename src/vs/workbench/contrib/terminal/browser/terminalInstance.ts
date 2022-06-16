@@ -215,7 +215,8 @@ export class TerminalInstance extends Disposable implements ITerminalInstance {
 
 	xterm?: XtermTerminal;
 	disableLayout: boolean = false;
-
+	private _taskReconnectionRequest: number | undefined;
+	get taskReconnectionRequest(): number | undefined { return this._taskReconnectionRequest; }
 	get target(): TerminalLocation | undefined { return this._target; }
 	set target(value: TerminalLocation | undefined) {
 		if (this.xterm) {
