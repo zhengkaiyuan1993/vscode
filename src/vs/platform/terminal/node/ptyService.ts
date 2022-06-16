@@ -396,7 +396,8 @@ export class PtyService extends Disposable implements IPtyService {
 			icon: persistentProcess.icon,
 			color: persistentProcess.color,
 			fixedDimensions: persistentProcess.fixedDimensions,
-			environmentVariableCollections: persistentProcess.processLaunchOptions.options.environmentVariableCollections
+			environmentVariableCollections: persistentProcess.processLaunchOptions.options.environmentVariableCollections,
+			reconnectionOwner: persistentProcess.shellLaunchConfig.reconnectionOwner
 		};
 	}
 

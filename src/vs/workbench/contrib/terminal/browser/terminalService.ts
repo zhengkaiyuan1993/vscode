@@ -988,7 +988,7 @@ export class TerminalService implements ITerminalService {
 			return instance;
 		}
 
-		if (shellLaunchConfig.reconnectionOwner && shellLaunchConfig.attachPersistentProcess?.id) {
+		if (shellLaunchConfig.attachPersistentProcess?.reconnectionOwner && shellLaunchConfig.attachPersistentProcess?.id) {
 			this._onDidRequestTaskReconnection.fire(shellLaunchConfig.attachPersistentProcess.id);
 		}
 

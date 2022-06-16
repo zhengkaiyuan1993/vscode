@@ -243,13 +243,14 @@ export class TerminalTaskSystem extends Disposable implements ITaskSystem {
 		this._terminals = Object.create(null);
 		this._idleTaskTerminals = new LinkedMap<string, string>();
 		this._sameTaskTerminals = Object.create(null);
-
 		this._onDidStateChange = new Emitter();
+		this._register(this.onDidStateChange(() => this._saveState()));
 		this._taskSystemInfoResolver = taskSystemInfoResolver;
 		this._register(this._terminalStatusManager = new TaskTerminalStatus(taskService));
 		this._restoreTasks();
 		this._register(this._terminalService.onDidRequestTaskReconnection((terminalId) => {
 			const task = this._getTaskFromTerminal(terminalId);
+			console.log('getting task from id', terminalId, task);
 			if (task) {
 				this.run(task.task, task.resolver);
 			} else {
@@ -265,17 +266,17 @@ export class TerminalTaskSystem extends Disposable implements ITaskSystem {
 	}
 
 	private _restoreTasks(): void {
-		const activeTasks = this._storageService.get(`activeTasks`, StorageScope.WORKSPACE);
+		const activeTasks = this._storageService.get(`taskReconnection.activeTasks`, StorageScope.WORKSPACE);
 		if (activeTasks) {
 			const tasks = JSON.parse(activeTasks);
 			this._activeTasks = tasks;
 		}
-		const busyTasks = this._storageService.get(`busyTasks`, StorageScope.WORKSPACE);
+		const busyTasks = this._storageService.get(`taskReconnection.busyTasks`, StorageScope.WORKSPACE);
 		if (busyTasks) {
 			const tasks = JSON.parse(busyTasks);
 			this._busyTasks = tasks;
 		}
-		const terminals = this._storageService.get(`terminals`, StorageScope.WORKSPACE);
+		const terminals = this._storageService.get(`taskReconnection.terminals`, StorageScope.WORKSPACE);
 		if (terminals) {
 			const tasks = JSON.parse(terminals);
 			this._terminals = tasks;
@@ -1240,6 +1241,7 @@ export class TerminalTaskSystem extends Disposable implements ITaskSystem {
 		}
 		shellLaunchConfig.isFeatureTerminal = true;
 		shellLaunchConfig.useShellEnvironment = true;
+		shellLaunchConfig.reconnectionOwner = true;
 		return shellLaunchConfig;
 	}
 
