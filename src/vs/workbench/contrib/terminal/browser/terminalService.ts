@@ -276,7 +276,7 @@ export class TerminalService implements ITerminalService {
 				const instanceToDetach = this.getInstanceFromResource(getTerminalUri(e.workspaceId, e.instanceId));
 				if (instanceToDetach) {
 					const persistentProcessId = instanceToDetach?.persistentProcessId;
-					if (persistentProcessId && !instanceToDetach.shellLaunchConfig.isFeatureTerminal && !instanceToDetach.shellLaunchConfig.customPtyImplementation) {
+					if (persistentProcessId && !instanceToDetach.shellLaunchConfig.customPtyImplementation) {
 						if (instanceToDetach.target === TerminalLocation.Editor) {
 							this._terminalEditorService.detachInstance(instanceToDetach);
 						} else {
