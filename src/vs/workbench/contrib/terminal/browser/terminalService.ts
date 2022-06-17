@@ -100,8 +100,8 @@ export class TerminalService implements ITerminalService {
 		return this._activeInstance;
 	}
 
-	private readonly _onDidRequestTaskReconnection = new Emitter<number>();
-	get onDidRequestTaskReconnection(): Event<number> { return this._onDidRequestTaskReconnection.event; }
+	private readonly _onDidRequestTaskReconnection = new Emitter<void>();
+	get onDidRequestTaskReconnection(): Event<void> { return this._onDidRequestTaskReconnection.event; }
 	private readonly _onDidChangeActiveGroup = new Emitter<ITerminalGroup | undefined>();
 	get onDidChangeActiveGroup(): Event<ITerminalGroup | undefined> { return this._onDidChangeActiveGroup.event; }
 	private readonly _onDidCreateInstance = new Emitter<ITerminalInstance>();
@@ -478,6 +478,7 @@ export class TerminalService implements ITerminalService {
 		this.onDidReceiveProcessId(() => this._saveState());
 		this.onDidChangeInstanceTitle(instance => this._updateTitle(instance));
 		this.onDidChangeInstanceIcon(instance => this._updateIcon(instance));
+		this._onDidRequestTaskReconnection.fire();
 	}
 
 	private _handleInstanceContextKeys(): void {
@@ -988,9 +989,8 @@ export class TerminalService implements ITerminalService {
 			return instance;
 		}
 
-		if (shellLaunchConfig.attachPersistentProcess?.reconnectionOwner && shellLaunchConfig.attachPersistentProcess?.id) {
-			this._onDidRequestTaskReconnection.fire(shellLaunchConfig.attachPersistentProcess.id);
-		}
+		// if (shellLaunchConfig.attachPersistentProcess?.reconnectionOwner && shellLaunchConfig.attachPersistentProcess?.id) {
+		// }
 
 		this._evaluateLocalCwd(shellLaunchConfig);
 		const location = this.resolveLocation(options?.location) || this.defaultLocation;
