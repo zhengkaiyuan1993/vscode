@@ -84,3 +84,9 @@
 .monaco-list-type-filter-message:empty {
 	display: none;
 }
+
+.monaco-list > .monaco-findInput {
+	position: absolute;
+	top: 0;
+	right: 0;
+}

@@ -4,8 +4,10 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { IDragAndDropData } from 'vs/base/browser/dnd';
-import { $, addDisposableListener, append, clearNode, createStyleSheet, hasParentWithClass } from 'vs/base/browser/dom';
+import { $, append, clearNode, createStyleSheet, hasParentWithClass } from 'vs/base/browser/dom';
 import { StandardKeyboardEvent } from 'vs/base/browser/keyboardEvent';
+import { IContextViewProvider } from 'vs/base/browser/ui/contextview/contextview';
+import { FindInput } from 'vs/base/browser/ui/findinput/findInput';
 import { IIdentityProvider, IKeyboardNavigationLabelProvider, IListContextMenuEvent, IListDragAndDrop, IListDragOverReaction, IListMouseEvent, IListRenderer, IListVirtualDelegate } from 'vs/base/browser/ui/list/list';
 import { ElementsDragAndDropData } from 'vs/base/browser/ui/list/listView';
 import { IListOptions, IListStyles, isInputElement, isMonacoEditor, List, MouseController } from 'vs/base/browser/ui/list/listWidget';
@@ -15,16 +17,15 @@ import { distinct, equals, firstOrDefault, range } from 'vs/base/common/arrays';
 import { disposableTimeout } from 'vs/base/common/async';
 import { Codicon } from 'vs/base/common/codicons';
 import { SetMap } from 'vs/base/common/collections';
+import { Color } from 'vs/base/common/color';
 import { Emitter, Event, EventBufferer, Relay } from 'vs/base/common/event';
 import { fuzzyScore, FuzzyScore } from 'vs/base/common/filters';
 import { KeyCode } from 'vs/base/common/keyCodes';
-import { Disposable, DisposableStore, dispose, IDisposable, toDisposable } from 'vs/base/common/lifecycle';
+import { Disposable, DisposableStore, dispose, IDisposable, MutableDisposable, toDisposable } from 'vs/base/common/lifecycle';
 import { clamp } from 'vs/base/common/numbers';
-import { isMacintosh } from 'vs/base/common/platform';
 import { ScrollEvent } from 'vs/base/common/scrollable';
 import { ISpliceable } from 'vs/base/common/sequence';
 import 'vs/css!./media/tree';
-import { localize } from 'vs/nls';
 
 class TreeElementsDragAndDropData<T, TFilterData, TContext> extends ElementsDragAndDropData<T, TContext> {
 
@@ -647,8 +648,6 @@ class TypeFilter<T> implements ITreeFilter<T, FuzzyScore | LabelFuzzyScore>, IDi
 
 class TypeFilterController<T, TFilterData> implements IDisposable {
 
-	private enabled = false;
-
 	private _pattern = '';
 	get pattern(): string { return this._pattern; }
 
@@ -658,17 +657,15 @@ class TypeFilterController<T, TFilterData> implements IDisposable {
 	private _empty: boolean = false;
 	get empty(): boolean { return this._empty; }
 
+	private get enabled(): boolean { return !!this.findInput.value; }
+
 	private readonly _onDidChangeEmptyState = new Emitter<boolean>();
 	readonly onDidChangeEmptyState: Event<boolean> = Event.latch(this._onDidChangeEmptyState.event);
 
-	private positionClassName = 'ne';
-	private domNode: HTMLElement;
-	private messageDomNode: HTMLElement;
-	private labelDomNode: HTMLElement;
-	private filterOnTypeDomNode: HTMLInputElement;
-	private clearDomNode: HTMLElement;
+	private findInput = new MutableDisposable<FindInput>();
+	// private messageDomNode: HTMLElement;
 
-	private triggered = false;
+	// private triggered = false;
 
 	private readonly _onDidChangePattern = new Emitter<string>();
 	readonly onDidChangePattern = this._onDidChangePattern.event;
@@ -681,29 +678,19 @@ class TypeFilterController<T, TFilterData> implements IDisposable {
 		model: ITreeModel<T, TFilterData, any>,
 		private view: List<ITreeNode<T, TFilterData>>,
 		private filter: TypeFilter<T>,
+		private readonly contextViewProvider: IContextViewProvider
 	) {
-		this.domNode = $(`.monaco-list-type-filter.${this.positionClassName}`);
-		this.domNode.draggable = true;
-
-		this.messageDomNode = append(view.getHTMLElement(), $(`.monaco-list-type-filter-message`));
-
-		this.labelDomNode = append(this.domNode, $('span.label'));
-		const controls = append(this.domNode, $('.controls'));
+		// this.messageDomNode = append(view.getHTMLElement(), $(`.monaco-list-type-filter-message`));
 
 		this._filterOnType = !!tree.options.filterOnType;
-		this.filterOnTypeDomNode = append(controls, $<HTMLInputElement>('input.filter'));
-		this.filterOnTypeDomNode.type = 'checkbox';
-		this.filterOnTypeDomNode.checked = this._filterOnType;
-		this.filterOnTypeDomNode.tabIndex = -1;
-		this.updateFilterOnTypeTitleAndIcon();
-		this.disposables.add(addDisposableListener(this.filterOnTypeDomNode, 'input', () => this.onDidChangeFilterOnType()));
 
-		this.clearDomNode = append(controls, $<HTMLInputElement>('button.clear' + Codicon.treeFilterClear.cssSelector));
-		this.clearDomNode.tabIndex = -1;
-		this.clearDomNode.title = localize('clear', "Clear");
+		// this.disposables.add(addDisposableListener(this.filterOnTypeDomNode, 'input', () => this.onDidChangeFilterOnType()));
 
 		model.onDidSplice(this.onDidSpliceModel, this, this.disposables);
 		this.updateOptions(tree.options);
+
+		this.disposables.add(this.findInput);
+		this.enable();
 	}
 
 	updateOptions(options: IAbstractTreeOptions<T, TFilterData>): void {
@@ -713,62 +700,55 @@ class TypeFilterController<T, TFilterData> implements IDisposable {
 		// 	this.enable();
 		// }
 
-		if (typeof options.filterOnType !== 'undefined') {
-			this._filterOnType = !!options.filterOnType;
-			this.filterOnTypeDomNode.checked = this._filterOnType;
-			this.updateFilterOnTypeTitleAndIcon();
-		}
+		// if (typeof options.filterOnType !== 'undefined') {
+		// 	this._filterOnType = !!options.filterOnType;
+		// 	this.filterOnTypeDomNode.checked = this._filterOnType;
+		// }
 
 		this.tree.refilter();
 		this.render();
 	}
 
-	toggle(): void {
-		this.triggered = !this.triggered;
+	// toggle(): void {
+	// 	this.triggered = !this.triggered;
 
-		if (!this.triggered) {
-			this.onEventOrInput('');
-		}
-	}
+	// 	if (!this.triggered) {
+	// 		this.onEventOrInput('');
+	// 	}
+	// }
 
 	private enable(): void {
 		if (this.enabled) {
 			return;
 		}
 
-		this.enabled = true;
+		const findInput = new FindInput(this.view.getHTMLElement(), this.contextViewProvider, true, { label: 'foo', inputBorder: Color.red });
+		this.findInput.value = findInput;
+
+		findInput.onDidChange(this.onDidChangeValue, this, this.enabledDisposables);
 	}
 
-	private disable(): void {
-		if (!this.enabled) {
-			return;
-		}
+	// private disable(): void {
+	// 	if (!this.enabled) {
+	// 		return;
+	// 	}
 
-		this.enabled = false;
-	}
+	// 	this.findInput.value = undefined;
+	// }
 
-	private onEventOrInput(e: MouseEvent | StandardKeyboardEvent | string): void {
-		if (typeof e === 'string') {
-			this.onInput(e);
-		} else if (e instanceof MouseEvent || e.keyCode === KeyCode.Escape || (e.keyCode === KeyCode.Backspace && (isMacintosh ? e.altKey : e.ctrlKey))) {
-			this.onInput('');
-		} else if (e.keyCode === KeyCode.Backspace) {
-			this.onInput(this.pattern.length === 0 ? '' : this.pattern.substr(0, this.pattern.length - 1));
-		} else {
-			this.onInput(this.pattern + e.browserEvent.key);
-		}
-	}
+	// private onEventOrInput(e: MouseEvent | StandardKeyboardEvent | string): void {
+	// 	if (typeof e === 'string') {
+	// 		this.onInput(e);
+	// 	} else if (e instanceof MouseEvent || e.keyCode === KeyCode.Escape || (e.keyCode === KeyCode.Backspace && (isMacintosh ? e.altKey : e.ctrlKey))) {
+	// 		this.onInput('');
+	// 	} else if (e.keyCode === KeyCode.Backspace) {
+	// 		this.onInput(this.pattern.length === 0 ? '' : this.pattern.substr(0, this.pattern.length - 1));
+	// 	} else {
+	// 		this.onInput(this.pattern + e.browserEvent.key);
+	// 	}
+	// }
 
-	private onInput(pattern: string): void {
-		const container = this.view.getHTMLElement();
-
-		if (pattern && !this.domNode.parentElement) {
-			container.append(this.domNode);
-		} else if (!pattern && this.domNode.parentElement) {
-			this.domNode.remove();
-			this.tree.domFocus();
-		}
-
+	private onDidChangeValue(pattern: string): void {
 		this._pattern = pattern;
 		this._onDidChangePattern.fire(pattern);
 
@@ -791,9 +771,9 @@ class TypeFilterController<T, TFilterData> implements IDisposable {
 
 		this.render();
 
-		if (!pattern) {
-			this.triggered = false;
-		}
+		// if (!pattern) {
+		// 	this.triggered = false;
+		// }
 	}
 
 	private onDidSpliceModel(): void {
@@ -805,42 +785,29 @@ class TypeFilterController<T, TFilterData> implements IDisposable {
 		this.render();
 	}
 
-	private onDidChangeFilterOnType(): void {
-		this.tree.updateOptions({ filterOnType: this.filterOnTypeDomNode.checked });
-		this.tree.refilter();
-		this.tree.domFocus();
-		this.render();
-		this.updateFilterOnTypeTitleAndIcon();
-	}
-
-	private updateFilterOnTypeTitleAndIcon(): void {
-		if (this.filterOnType) {
-			this.filterOnTypeDomNode.classList.remove(...Codicon.treeFilterOnTypeOff.classNamesArray);
-			this.filterOnTypeDomNode.classList.add(...Codicon.treeFilterOnTypeOn.classNamesArray);
-			this.filterOnTypeDomNode.title = localize('disable filter on type', "Disable Filter on Type");
-		} else {
-			this.filterOnTypeDomNode.classList.remove(...Codicon.treeFilterOnTypeOn.classNamesArray);
-			this.filterOnTypeDomNode.classList.add(...Codicon.treeFilterOnTypeOff.classNamesArray);
-			this.filterOnTypeDomNode.title = localize('enable filter on type', "Enable Filter on Type");
-		}
-	}
+	// private onDidChangeFilterOnType(): void {
+	// 	this.tree.updateOptions({ filterOnType: this.filterOnTypeDomNode.checked });
+	// 	this.tree.refilter();
+	// 	this.tree.domFocus();
+	// 	this.render();
+	// }
 
 	private render(): void {
-		const noMatches = this.filter.totalCount > 0 && this.filter.matchCount === 0;
+		// const noMatches = this.filter.totalCount > 0 && this.filter.matchCount === 0;
 
-		if (this.pattern && this.tree.options.filterOnType && noMatches) {
-			this.messageDomNode.textContent = localize('empty', "No elements found");
-			this._empty = true;
-		} else {
-			this.messageDomNode.innerText = '';
-			this._empty = false;
-		}
+		// if (this.pattern && this.tree.options.filterOnType && noMatches) {
+		// 	this.messageDomNode.textContent = localize('empty', "No elements found");
+		// 	this._empty = true;
+		// } else {
+		// 	this.messageDomNode.innerText = '';
+		// 	this._empty = false;
+		// }
 
-		this.domNode.classList.toggle('no-matches', noMatches);
-		this.domNode.title = localize('found', "Matched {0} out of {1} elements", this.filter.matchCount, this.filter.totalCount);
-		this.labelDomNode.textContent = this.pattern.length > 16 ? '…' + this.pattern.substr(this.pattern.length - 16) : this.pattern;
+		// this.domNode.classList.toggle('no-matches', noMatches);
+		// this.domNode.title = localize('found', "Matched {0} out of {1} elements", this.filter.matchCount, this.filter.totalCount);
+		// this.labelDomNode.textContent = this.pattern.length > 16 ? '…' + this.pattern.substr(this.pattern.length - 16) : this.pattern;
 
-		this._onDidChangeEmptyState.fire(this._empty);
+		// this._onDidChangeEmptyState.fire(this._empty);
 	}
 
 	shouldAllowFocus(node: ITreeNode<T, TFilterData>): boolean {
@@ -856,15 +823,9 @@ class TypeFilterController<T, TFilterData> implements IDisposable {
 	}
 
 	dispose() {
-		if (this.enabled) {
-			this.domNode.remove();
-			this.enabledDisposables.dispose();
-			this.enabled = false;
-			this.triggered = false;
-		}
-
 		this._onDidChangePattern.dispose();
-		dispose(this.disposables);
+		this.enabledDisposables.dispose();
+		this.disposables.dispose();
 	}
 }
 
@@ -909,6 +870,7 @@ export interface IAbstractTreeOptionsUpdate extends ITreeRendererOptions {
 }
 
 export interface IAbstractTreeOptions<T, TFilterData = void> extends IAbstractTreeOptionsUpdate, IListOptions<T> {
+	readonly contextViewProvider?: IContextViewProvider;
 	readonly collapseByDefault?: boolean; // defaults to false
 	readonly filter?: ITreeFilter<T, TFilterData>;
 	readonly dnd?: ITreeDragAndDrop<T>;
@@ -1322,8 +1284,8 @@ export abstract class AbstractTree<T, TFilterData, TRef> implements IDisposable 
 			onKeyDown.filter(e => e.keyCode === KeyCode.Space).on(this.onSpace, this, this.disposables);
 		}
 
-		if (_options.keyboardNavigationLabelProvider) {
-			this.typeFilterController = new TypeFilterController(this, this.model, this.view, filter!);
+		if (_options.keyboardNavigationLabelProvider && _options.contextViewProvider) {
+			this.typeFilterController = new TypeFilterController(this, this.model, this.view, filter!, _options.contextViewProvider);
 			this.focusNavigationFilter = node => this.typeFilterController!.shouldAllowFocus(node);
 			this.disposables.add(this.typeFilterController!);
 		}
@@ -1513,9 +1475,9 @@ export abstract class AbstractTree<T, TFilterData, TRef> implements IDisposable 
 	toggleKeyboardNavigation(): void {
 		this.view.toggleKeyboardNavigation();
 
-		if (this.typeFilterController) {
-			this.typeFilterController.toggle();
-		}
+		// if (this.typeFilterController) {
+		// 	this.typeFilterController.toggle();
+		// }
 	}
 
 	refilter(): void {
