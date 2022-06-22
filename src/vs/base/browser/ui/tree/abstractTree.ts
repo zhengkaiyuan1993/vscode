@@ -3,13 +3,12 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { DragAndDropData, IDragAndDropData, StaticDND } from 'vs/base/browser/dnd';
-import { $, addDisposableListener, append, clearNode, createStyleSheet, getDomNodePagePosition, hasParentWithClass } from 'vs/base/browser/dom';
-import { DomEmitter } from 'vs/base/browser/event';
+import { IDragAndDropData } from 'vs/base/browser/dnd';
+import { $, addDisposableListener, append, clearNode, createStyleSheet, hasParentWithClass } from 'vs/base/browser/dom';
 import { StandardKeyboardEvent } from 'vs/base/browser/keyboardEvent';
-import { IIdentityProvider, IKeyboardNavigationDelegate, IKeyboardNavigationLabelProvider, IListContextMenuEvent, IListDragAndDrop, IListDragOverReaction, IListMouseEvent, IListRenderer, IListVirtualDelegate } from 'vs/base/browser/ui/list/list';
+import { IIdentityProvider, IKeyboardNavigationLabelProvider, IListContextMenuEvent, IListDragAndDrop, IListDragOverReaction, IListMouseEvent, IListRenderer, IListVirtualDelegate } from 'vs/base/browser/ui/list/list';
 import { ElementsDragAndDropData } from 'vs/base/browser/ui/list/listView';
-import { DefaultKeyboardNavigationDelegate, IListOptions, IListStyles, isInputElement, isMonacoEditor, List, MouseController } from 'vs/base/browser/ui/list/listWidget';
+import { IListOptions, IListStyles, isInputElement, isMonacoEditor, List, MouseController } from 'vs/base/browser/ui/list/listWidget';
 import { getVisibleState, isFilterResult } from 'vs/base/browser/ui/tree/indexTreeModel';
 import { ICollapseStateChangeEvent, ITreeContextMenuEvent, ITreeDragAndDrop, ITreeEvent, ITreeFilter, ITreeModel, ITreeModelSpliceEvent, ITreeMouseEvent, ITreeNavigator, ITreeNode, ITreeRenderer, TreeDragOverBubble, TreeError, TreeFilterResult, TreeMouseEventTarget, TreeVisibility } from 'vs/base/browser/ui/tree/tree';
 import { distinct, equals, firstOrDefault, range } from 'vs/base/common/arrays';
@@ -653,8 +652,7 @@ class TypeFilter<T> implements ITreeFilter<T, FuzzyScore | LabelFuzzyScore>, IDi
 
 class TypeFilterController<T, TFilterData> implements IDisposable {
 
-	private _enabled = false;
-	get enabled(): boolean { return this._enabled; }
+	private enabled = false;
 
 	private _pattern = '';
 	get pattern(): string { return this._pattern; }
@@ -674,9 +672,7 @@ class TypeFilterController<T, TFilterData> implements IDisposable {
 	private labelDomNode: HTMLElement;
 	private filterOnTypeDomNode: HTMLInputElement;
 	private clearDomNode: HTMLElement;
-	private keyboardNavigationEventFilter?: IKeyboardNavigationEventFilter;
 
-	private automaticKeyboardNavigation = true;
 	private triggered = false;
 
 	private readonly _onDidChangePattern = new Emitter<string>();
@@ -690,11 +686,9 @@ class TypeFilterController<T, TFilterData> implements IDisposable {
 		model: ITreeModel<T, TFilterData, any>,
 		private view: List<ITreeNode<T, TFilterData>>,
 		private filter: TypeFilter<T>,
-		private keyboardNavigationDelegate: IKeyboardNavigationDelegate
 	) {
 		this.domNode = $(`.monaco-list-type-filter.${this.positionClassName}`);
 		this.domNode.draggable = true;
-		this.disposables.add(addDisposableListener(this.domNode, 'dragstart', () => this.onDragStart()));
 
 		this.messageDomNode = append(view.getHTMLElement(), $(`.monaco-list-type-filter-message`));
 
@@ -713,8 +707,6 @@ class TypeFilterController<T, TFilterData> implements IDisposable {
 		this.clearDomNode.tabIndex = -1;
 		this.clearDomNode.title = localize('clear', "Clear");
 
-		this.keyboardNavigationEventFilter = tree.options.keyboardNavigationEventFilter;
-
 		model.onDidSplice(this.onDidSpliceModel, this, this.disposables);
 		this.updateOptions(tree.options);
 	}
@@ -732,16 +724,8 @@ class TypeFilterController<T, TFilterData> implements IDisposable {
 			this.updateFilterOnTypeTitleAndIcon();
 		}
 
-		if (typeof options.automaticKeyboardNavigation !== 'undefined') {
-			this.automaticKeyboardNavigation = options.automaticKeyboardNavigation;
-		}
-
 		this.tree.refilter();
 		this.render();
-
-		if (!this.automaticKeyboardNavigation) {
-			this.onEventOrInput('');
-		}
 	}
 
 	toggle(): void {
@@ -753,44 +737,19 @@ class TypeFilterController<T, TFilterData> implements IDisposable {
 	}
 
 	private enable(): void {
-		if (this._enabled) {
+		if (this.enabled) {
 			return;
 		}
 
-		const onRawKeyDown = this.enabledDisposables.add(new DomEmitter(this.view.getHTMLElement(), 'keydown'));
-		const onKeyDown = Event.chain(onRawKeyDown.event)
-			.filter(e => !isInputElement(e.target as HTMLElement) || e.target === this.filterOnTypeDomNode)
-			.filter(e => e.key !== 'Dead' && !/^Media/.test(e.key))
-			.map(e => new StandardKeyboardEvent(e))
-			.filter(this.keyboardNavigationEventFilter || (() => true))
-			.filter(() => this.automaticKeyboardNavigation || this.triggered)
-			.filter(e => (this.keyboardNavigationDelegate.mightProducePrintableCharacter(e) && !(e.keyCode === KeyCode.DownArrow || e.keyCode === KeyCode.UpArrow || e.keyCode === KeyCode.LeftArrow || e.keyCode === KeyCode.RightArrow)) || ((this.pattern.length > 0 || this.triggered) && ((e.keyCode === KeyCode.Escape || e.keyCode === KeyCode.Backspace) && !e.altKey && !e.ctrlKey && !e.metaKey) || (e.keyCode === KeyCode.Backspace && (isMacintosh ? (e.altKey && !e.metaKey) : e.ctrlKey) && !e.shiftKey)))
-			.forEach(e => { e.stopPropagation(); e.preventDefault(); })
-			.event;
-
-		const onClearClick = this.enabledDisposables.add(new DomEmitter(this.clearDomNode, 'click'));
-
-		Event.chain(Event.any<MouseEvent | StandardKeyboardEvent>(onKeyDown, onClearClick.event))
-			.event(this.onEventOrInput, this, this.enabledDisposables);
-
-		this.filter.pattern = '';
-		this.tree.refilter();
-		this.render();
-		this._enabled = true;
-		this.triggered = false;
+		this.enabled = true;
 	}
 
 	private disable(): void {
-		if (!this._enabled) {
+		if (!this.enabled) {
 			return;
 		}
 
-		this.domNode.remove();
-		this.enabledDisposables.clear();
-		this.tree.refilter();
-		this.render();
-		this._enabled = false;
-		this.triggered = false;
+		this.enabled = false;
 	}
 
 	private onEventOrInput(e: MouseEvent | StandardKeyboardEvent | string): void {
@@ -842,69 +801,8 @@ class TypeFilterController<T, TFilterData> implements IDisposable {
 		}
 	}
 
-	private onDragStart(): void {
-		const container = this.view.getHTMLElement();
-		const { left } = getDomNodePagePosition(container);
-		const containerWidth = container.clientWidth;
-		const midContainerWidth = containerWidth / 2;
-		const width = this.domNode.clientWidth;
-		const disposables = new DisposableStore();
-		let positionClassName = this.positionClassName;
-
-		const updatePosition = () => {
-			switch (positionClassName) {
-				case 'nw':
-					this.domNode.style.top = `4px`;
-					this.domNode.style.left = `4px`;
-					break;
-				case 'ne':
-					this.domNode.style.top = `4px`;
-					this.domNode.style.left = `${containerWidth - width - 6}px`;
-					break;
-			}
-		};
-
-		const onDragOver = (event: DragEvent) => {
-			event.preventDefault(); // needed so that the drop event fires (https://stackoverflow.com/questions/21339924/drop-event-not-firing-in-chrome)
-
-			const x = event.clientX - left;
-			if (event.dataTransfer) {
-				event.dataTransfer.dropEffect = 'none';
-			}
-
-			if (x < midContainerWidth) {
-				positionClassName = 'nw';
-			} else {
-				positionClassName = 'ne';
-			}
-
-			updatePosition();
-		};
-
-		const onDragEnd = () => {
-			this.positionClassName = positionClassName;
-			this.domNode.className = `monaco-list-type-filter ${this.positionClassName}`;
-			this.domNode.style.top = '';
-			this.domNode.style.left = '';
-
-			dispose(disposables);
-		};
-
-		updatePosition();
-		this.domNode.classList.remove(positionClassName);
-
-		this.domNode.classList.add('dragging');
-		disposables.add(toDisposable(() => this.domNode.classList.remove('dragging')));
-
-		disposables.add(addDisposableListener(document, 'dragover', e => onDragOver(e)));
-		disposables.add(addDisposableListener(this.domNode, 'dragend', () => onDragEnd()));
-
-		StaticDND.CurrentDragAndDropData = new DragAndDropData('vscode-ui');
-		disposables.add(toDisposable(() => StaticDND.CurrentDragAndDropData = undefined));
-	}
-
 	private onDidSpliceModel(): void {
-		if (!this._enabled || this.pattern.length === 0) {
+		if (!this.enabled || this.pattern.length === 0) {
 			return;
 		}
 
@@ -963,10 +861,10 @@ class TypeFilterController<T, TFilterData> implements IDisposable {
 	}
 
 	dispose() {
-		if (this._enabled) {
+		if (this.enabled) {
 			this.domNode.remove();
 			this.enabledDisposables.dispose();
-			this._enabled = false;
+			this.enabled = false;
 			this.triggered = false;
 		}
 
@@ -1431,8 +1329,7 @@ export abstract class AbstractTree<T, TFilterData, TRef> implements IDisposable 
 		}
 
 		if (_options.keyboardNavigationLabelProvider) {
-			const delegate = _options.keyboardNavigationDelegate || DefaultKeyboardNavigationDelegate;
-			this.typeFilterController = new TypeFilterController(this, this.model, this.view, filter!, delegate);
+			this.typeFilterController = new TypeFilterController(this, this.model, this.view, filter!);
 			this.focusNavigationFilter = node => this.typeFilterController!.shouldAllowFocus(node);
 			this.disposables.add(this.typeFilterController!);
 		}

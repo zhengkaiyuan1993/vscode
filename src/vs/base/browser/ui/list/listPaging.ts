@@ -96,7 +96,6 @@ class PagedAccessibilityProvider<T> implements IListAccessibilityProvider<number
 
 export interface IPagedListOptions<T> {
 	readonly enableKeyboardNavigation?: boolean;
-	readonly automaticKeyboardNavigation?: boolean;
 	readonly ariaLabel?: string;
 	readonly keyboardSupport?: boolean;
 	readonly multipleSelectionSupport?: boolean;
