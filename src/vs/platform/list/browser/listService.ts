@@ -23,7 +23,7 @@ import { Extensions as ConfigurationExtensions, IConfigurationRegistry } from 'v
 import { ContextKeyExpr, IContextKey, IContextKeyService, RawContextKey } from 'vs/platform/contextkey/common/contextkey';
 import { InputFocusedContextKey } from 'vs/platform/contextkey/common/contextkeys';
 import { IEditorOptions } from 'vs/platform/editor/common/editor';
-import { createDecorator } from 'vs/platform/instantiation/common/instantiation';
+import { createDecorator, IInstantiationService, ServicesAccessor } from 'vs/platform/instantiation/common/instantiation';
 import { IKeybindingService } from 'vs/platform/keybinding/common/keybinding';
 import { Registry } from 'vs/platform/registry/common/platform';
 import { attachListStyler, computeStyles, defaultListStyles, IColorMapping } from 'vs/platform/theme/common/styler';
@@ -839,14 +839,14 @@ export class WorkbenchObjectTree<T extends NonNullable<any>, TFilterData = void>
 		delegate: IListVirtualDelegate<T>,
 		renderers: ITreeRenderer<T, TFilterData, any>[],
 		options: IWorkbenchObjectTreeOptions<T, TFilterData>,
+		@IInstantiationService instantiationService: IInstantiationService,
 		@IContextKeyService contextKeyService: IContextKeyService,
 		@IListService listService: IListService,
 		@IThemeService themeService: IThemeService,
 		@IConfigurationService configurationService: IConfigurationService,
-		@IKeybindingService keybindingService: IKeybindingService,
 		@IAccessibilityService accessibilityService: IAccessibilityService
 	) {
-		const { options: treeOptions, disposable } = workbenchTreeDataPreamble<T, TFilterData, IWorkbenchObjectTreeOptions<T, TFilterData>>(container, options, contextKeyService, configurationService, keybindingService, accessibilityService);
+		const { options: treeOptions, disposable } = instantiationService.invokeFunction(workbenchTreeDataPreamble, container, options as any);
 		super(user, container, delegate, renderers, treeOptions);
 		this.disposables.add(disposable);
 		this.internals = new WorkbenchTreeInternals(this, options, options.overrideStyles, contextKeyService, listService, themeService, configurationService, accessibilityService);
@@ -881,14 +881,14 @@ export class WorkbenchCompressibleObjectTree<T extends NonNullable<any>, TFilter
 		delegate: IListVirtualDelegate<T>,
 		renderers: ICompressibleTreeRenderer<T, TFilterData, any>[],
 		options: IWorkbenchCompressibleObjectTreeOptions<T, TFilterData>,
+		@IInstantiationService instantiationService: IInstantiationService,
 		@IContextKeyService contextKeyService: IContextKeyService,
 		@IListService listService: IListService,
 		@IThemeService themeService: IThemeService,
 		@IConfigurationService configurationService: IConfigurationService,
-		@IKeybindingService keybindingService: IKeybindingService,
 		@IAccessibilityService accessibilityService: IAccessibilityService
 	) {
-		const { options: treeOptions, disposable } = workbenchTreeDataPreamble<T, TFilterData, IWorkbenchCompressibleObjectTreeOptions<T, TFilterData>>(container, options, contextKeyService, configurationService, keybindingService, accessibilityService);
+		const { options: treeOptions, disposable } = instantiationService.invokeFunction(workbenchTreeDataPreamble, container, options as any);
 		super(user, container, delegate, renderers, treeOptions);
 		this.disposables.add(disposable);
 		this.internals = new WorkbenchTreeInternals(this, options, options.overrideStyles, contextKeyService, listService, themeService, configurationService, accessibilityService);
@@ -929,14 +929,14 @@ export class WorkbenchDataTree<TInput, T, TFilterData = void> extends DataTree<T
 		renderers: ITreeRenderer<T, TFilterData, any>[],
 		dataSource: IDataSource<TInput, T>,
 		options: IWorkbenchDataTreeOptions<T, TFilterData>,
+		@IInstantiationService instantiationService: IInstantiationService,
 		@IContextKeyService contextKeyService: IContextKeyService,
 		@IListService listService: IListService,
 		@IThemeService themeService: IThemeService,
 		@IConfigurationService configurationService: IConfigurationService,
-		@IKeybindingService keybindingService: IKeybindingService,
 		@IAccessibilityService accessibilityService: IAccessibilityService
 	) {
-		const { options: treeOptions, disposable } = workbenchTreeDataPreamble<T, TFilterData, IWorkbenchDataTreeOptions<T, TFilterData>>(container, options, contextKeyService, configurationService, keybindingService, accessibilityService);
+		const { options: treeOptions, disposable } = instantiationService.invokeFunction(workbenchTreeDataPreamble, container, options as any);
 		super(user, container, delegate, renderers, dataSource, treeOptions);
 		this.disposables.add(disposable);
 		this.internals = new WorkbenchTreeInternals(this, options, options.overrideStyles, contextKeyService, listService, themeService, configurationService, accessibilityService);
@@ -977,14 +977,14 @@ export class WorkbenchAsyncDataTree<TInput, T, TFilterData = void> extends Async
 		renderers: ITreeRenderer<T, TFilterData, any>[],
 		dataSource: IAsyncDataSource<TInput, T>,
 		options: IWorkbenchAsyncDataTreeOptions<T, TFilterData>,
+		@IInstantiationService instantiationService: IInstantiationService,
 		@IContextKeyService contextKeyService: IContextKeyService,
 		@IListService listService: IListService,
 		@IThemeService themeService: IThemeService,
 		@IConfigurationService configurationService: IConfigurationService,
-		@IKeybindingService keybindingService: IKeybindingService,
 		@IAccessibilityService accessibilityService: IAccessibilityService
 	) {
-		const { options: treeOptions, disposable } = workbenchTreeDataPreamble<T, TFilterData, IWorkbenchAsyncDataTreeOptions<T, TFilterData>>(container, options, contextKeyService, configurationService, keybindingService, accessibilityService);
+		const { options: treeOptions, disposable } = instantiationService.invokeFunction(workbenchTreeDataPreamble, container, options as any);
 		super(user, container, delegate, renderers, dataSource, treeOptions);
 		this.disposables.add(disposable);
 		this.internals = new WorkbenchTreeInternals(this, options, options.overrideStyles, contextKeyService, listService, themeService, configurationService, accessibilityService);
@@ -1023,14 +1023,14 @@ export class WorkbenchCompressibleAsyncDataTree<TInput, T, TFilterData = void> e
 		renderers: ICompressibleTreeRenderer<T, TFilterData, any>[],
 		dataSource: IAsyncDataSource<TInput, T>,
 		options: IWorkbenchCompressibleAsyncDataTreeOptions<T, TFilterData>,
+		@IInstantiationService instantiationService: IInstantiationService,
 		@IContextKeyService contextKeyService: IContextKeyService,
 		@IListService listService: IListService,
 		@IThemeService themeService: IThemeService,
 		@IConfigurationService configurationService: IConfigurationService,
-		@IKeybindingService keybindingService: IKeybindingService,
 		@IAccessibilityService accessibilityService: IAccessibilityService
 	) {
-		const { options: treeOptions, disposable } = workbenchTreeDataPreamble<T, TFilterData, IWorkbenchCompressibleAsyncDataTreeOptions<T, TFilterData>>(container, options, contextKeyService, configurationService, keybindingService, accessibilityService);
+		const { options: treeOptions, disposable } = instantiationService.invokeFunction(workbenchTreeDataPreamble, container, options as any);
 		super(user, container, virtualDelegate, compressionDelegate, renderers, dataSource, treeOptions);
 		this.disposables.add(disposable);
 		this.internals = new WorkbenchTreeInternals(this, options, options.overrideStyles, contextKeyService, listService, themeService, configurationService, accessibilityService);
@@ -1044,13 +1044,14 @@ export class WorkbenchCompressibleAsyncDataTree<TInput, T, TFilterData = void> e
 }
 
 function workbenchTreeDataPreamble<T, TFilterData, TOptions extends IAbstractTreeOptions<T, TFilterData> | IAsyncDataTreeOptions<T, TFilterData>>(
+	accessor: ServicesAccessor,
 	container: HTMLElement,
 	options: TOptions,
-	contextKeyService: IContextKeyService,
-	configurationService: IConfigurationService,
-	keybindingService: IKeybindingService,
-	accessibilityService: IAccessibilityService,
 ): { options: TOptions; disposable: IDisposable } {
+	const configurationService = accessor.get(IConfigurationService);
+	const keybindingService = accessor.get(IKeybindingService);
+	const accessibilityService = accessor.get(IAccessibilityService);
+
 	const accessibilityOn = accessibilityService.isScreenReaderOptimized();
 	const keyboardNavigation = accessibilityOn ? 'simple' : configurationService.getValue<string>(keyboardNavigationSettingKey);
 	const horizontalScrolling = options.horizontalScrolling !== undefined ? options.horizontalScrolling : Boolean(configurationService.getValue(horizontalScrollingKey));

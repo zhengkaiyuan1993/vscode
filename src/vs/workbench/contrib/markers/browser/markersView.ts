@@ -922,14 +922,14 @@ class MarkersTree extends WorkbenchObjectTree<MarkerElement, FilterData> impleme
 		delegate: IListVirtualDelegate<MarkerElement>,
 		renderers: ITreeRenderer<MarkerElement, FilterData, any>[],
 		options: IWorkbenchObjectTreeOptions<MarkerElement, FilterData>,
+		@IInstantiationService instantiationService: IInstantiationService,
 		@IContextKeyService contextKeyService: IContextKeyService,
 		@IListService listService: IListService,
 		@IThemeService themeService: IThemeService,
 		@IConfigurationService configurationService: IConfigurationService,
-		@IKeybindingService keybindingService: IKeybindingService,
 		@IAccessibilityService accessibilityService: IAccessibilityService
 	) {
-		super(user, container, delegate, renderers, options, contextKeyService, listService, themeService, configurationService, keybindingService, accessibilityService);
+		super(user, container, delegate, renderers, options, instantiationService, contextKeyService, listService, themeService, configurationService, accessibilityService);
 		this.visibilityContextKey = MarkersContextKeys.MarkersTreeVisibilityContextKey.bindTo(contextKeyService);
 	}
 

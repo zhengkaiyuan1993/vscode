@@ -2331,7 +2331,6 @@ export class SettingsTree extends WorkbenchObjectTree<SettingsTreeElement> {
 		@IListService listService: IListService,
 		@IThemeService themeService: IThemeService,
 		@IConfigurationService configurationService: IConfigurationService,
-		@IKeybindingService keybindingService: IKeybindingService,
 		@IAccessibilityService accessibilityService: IAccessibilityService,
 		@IInstantiationService instantiationService: IInstantiationService,
 	) {
@@ -2352,11 +2351,11 @@ export class SettingsTree extends WorkbenchObjectTree<SettingsTreeElement> {
 				smoothScrolling: configurationService.getValue<boolean>('workbench.list.smoothScrolling'),
 				multipleSelectionSupport: false,
 			},
+			instantiationService,
 			contextKeyService,
 			listService,
 			themeService,
 			configurationService,
-			keybindingService,
 			accessibilityService,
 		);
 

@@ -17,7 +17,6 @@ import { IThemeService, registerThemingParticipant, IColorTheme, ICssStyleCollec
 import { IAccessibilityService } from 'vs/platform/accessibility/common/accessibility';
 import { IAsyncDataSource, ITreeNode } from 'vs/base/browser/ui/tree/tree';
 import { IListVirtualDelegate, IListRenderer } from 'vs/base/browser/ui/list/list';
-import { IKeybindingService } from 'vs/platform/keybinding/common/keybinding';
 import { CancellationToken } from 'vs/base/common/cancellation';
 import { isNonEmptyArray } from 'vs/base/common/arrays';
 import { IColorMapping } from 'vs/platform/theme/common/styler';
@@ -244,7 +243,6 @@ export class ExtensionsTree extends WorkbenchAsyncDataTree<IExtensionData, IExte
 		@IThemeService themeService: IThemeService,
 		@IInstantiationService instantiationService: IInstantiationService,
 		@IConfigurationService configurationService: IConfigurationService,
-		@IKeybindingService keybindingService: IKeybindingService,
 		@IAccessibilityService accessibilityService: IAccessibilityService,
 		@IExtensionsWorkbenchService extensionsWorkdbenchService: IExtensionsWorkbenchService
 	) {
@@ -278,7 +276,7 @@ export class ExtensionsTree extends WorkbenchAsyncDataTree<IExtensionData, IExte
 					}
 				}
 			},
-			contextKeyService, listService, themeService, configurationService, keybindingService, accessibilityService
+			instantiationService, contextKeyService, listService, themeService, configurationService, accessibilityService
 		);
 
 		this.setInput(input);
