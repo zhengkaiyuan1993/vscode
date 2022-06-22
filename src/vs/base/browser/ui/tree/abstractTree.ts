@@ -193,8 +193,7 @@ function asListOptions<T, TFilterData, TRef>(modelProvider: () => ITreeModel<T, 
 			getKeyboardNavigationLabel(node) {
 				return options.keyboardNavigationLabelProvider!.getKeyboardNavigationLabel(node.element);
 			}
-		},
-		enableKeyboardNavigation: options.simpleKeyboardNavigation
+		}
 	};
 }
 
@@ -589,10 +588,6 @@ class TypeFilter<T> implements ITreeFilter<T, FuzzyScore | LabelFuzzyScore>, IDi
 		if (this._filter) {
 			const result = this._filter.filter(element, parentVisibility);
 
-			if (this.tree.options.simpleKeyboardNavigation) {
-				return result;
-			}
-
 			let visibility: TreeVisibility;
 
 			if (typeof result === 'boolean') {
@@ -610,7 +605,7 @@ class TypeFilter<T> implements ITreeFilter<T, FuzzyScore | LabelFuzzyScore>, IDi
 
 		this._totalCount++;
 
-		if (this.tree.options.simpleKeyboardNavigation || !this._pattern) {
+		if (!this._pattern) {
 			this._matchCount++;
 			return { data: FuzzyScore.Default, visibility: true };
 		}
@@ -712,11 +707,11 @@ class TypeFilterController<T, TFilterData> implements IDisposable {
 	}
 
 	updateOptions(options: IAbstractTreeOptions<T, TFilterData>): void {
-		if (options.simpleKeyboardNavigation) {
-			this.disable();
-		} else {
-			this.enable();
-		}
+		// if (options.simpleKeyboardNavigation) {
+		// 	this.disable();
+		// } else {
+		// 	this.enable();
+		// }
 
 		if (typeof options.filterOnType !== 'undefined') {
 			this._filterOnType = !!options.filterOnType;
@@ -904,7 +899,6 @@ export interface IKeyboardNavigationEventFilter {
 export interface IAbstractTreeOptionsUpdate extends ITreeRendererOptions {
 	readonly multipleSelectionSupport?: boolean;
 	readonly automaticKeyboardNavigation?: boolean;
-	readonly simpleKeyboardNavigation?: boolean;
 	readonly filterOnType?: boolean;
 	readonly smoothScrolling?: boolean;
 	readonly horizontalScrolling?: boolean;
@@ -1345,10 +1339,7 @@ export abstract class AbstractTree<T, TFilterData, TRef> implements IDisposable 
 			renderer.updateOptions(optionsUpdate);
 		}
 
-		this.view.updateOptions({
-			...this._options,
-			enableKeyboardNavigation: this._options.simpleKeyboardNavigation,
-		});
+		this.view.updateOptions(this._options);
 
 		this.typeFilterController?.updateOptions(this._options);
 
