@@ -4,18 +4,18 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as vscode from 'vscode';
-import type * as Proto from '../protocol';
+import { DocumentSelector } from '../configuration/documentSelector';
+import { LanguageDescription } from '../configuration/languageDescription';
+import type * as Proto from '../tsServer/protocol/protocol';
+import * as typeConverters from '../typeConverters';
 import { ITypeScriptServiceClient } from '../typescriptService';
-import { conditionalRegistration, requireGlobalConfiguration } from '../utils/dependentRegistration';
-import { DocumentSelector } from '../utils/documentSelector';
-import { LanguageDescription } from '../utils/languageDescription';
-import * as typeConverters from '../utils/typeConverters';
 import FileConfigurationManager from './fileConfigurationManager';
+import { conditionalRegistration, requireGlobalConfiguration } from './util/dependentRegistration';
 
 class TypeScriptFormattingProvider implements vscode.DocumentRangeFormattingEditProvider, vscode.OnTypeFormattingEditProvider {
 	public constructor(
 		private readonly client: ITypeScriptServiceClient,
-		private readonly formattingOptionsManager: FileConfigurationManager
+		private readonly fileConfigurationManager: FileConfigurationManager
 	) { }
 
 	public async provideDocumentRangeFormattingEdits(
@@ -29,7 +29,7 @@ class TypeScriptFormattingProvider implements vscode.DocumentRangeFormattingEdit
 			return undefined;
 		}
 
-		await this.formattingOptionsManager.ensureConfigurationOptions(document, options, token);
+		await this.fileConfigurationManager.ensureConfigurationOptions(document, options, token);
 
 		const args = typeConverters.Range.toFormattingRequestArgs(file, range);
 		const response = await this.client.execute('format', args, token);
@@ -52,7 +52,7 @@ class TypeScriptFormattingProvider implements vscode.DocumentRangeFormattingEdit
 			return [];
 		}
 
-		await this.formattingOptionsManager.ensureConfigurationOptions(document, options, token);
+		await this.fileConfigurationManager.ensureConfigurationOptions(document, options, token);
 
 		const args: Proto.FormatOnKeyRequestArgs = {
 			...typeConverters.Position.toFileLocationRequestArgs(file, position),

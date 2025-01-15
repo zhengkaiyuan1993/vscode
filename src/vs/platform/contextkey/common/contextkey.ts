@@ -3,13 +3,15 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { CharCode } from 'vs/base/common/charCode';
-import { Event } from 'vs/base/common/event';
-import { isChrome, isEdge, isFirefox, isLinux, isMacintosh, isSafari, isWeb, isWindows } from 'vs/base/common/platform';
-import { isFalsyOrWhitespace } from 'vs/base/common/strings';
-import { Scanner, LexingError, Token, TokenType } from 'vs/platform/contextkey/common/scanner';
-import { createDecorator } from 'vs/platform/instantiation/common/instantiation';
-import { localize } from 'vs/nls';
+import { CharCode } from '../../../base/common/charCode.js';
+import { Event } from '../../../base/common/event.js';
+import { isChrome, isEdge, isFirefox, isLinux, isMacintosh, isSafari, isWeb, isWindows } from '../../../base/common/platform.js';
+import { isFalsyOrWhitespace } from '../../../base/common/strings.js';
+import { Scanner, LexingError, Token, TokenType } from './scanner.js';
+import { createDecorator } from '../../instantiation/common/instantiation.js';
+import { localize } from '../../../nls.js';
+import { IDisposable } from '../../../base/common/lifecycle.js';
+import { illegalArgument } from '../../../base/common/errors.js';
 
 const CONSTANT_VALUES = new Map<string, boolean>();
 CONSTANT_VALUES.set('false', false);
@@ -23,6 +25,13 @@ CONSTANT_VALUES.set('isEdge', isEdge);
 CONSTANT_VALUES.set('isFirefox', isFirefox);
 CONSTANT_VALUES.set('isChrome', isChrome);
 CONSTANT_VALUES.set('isSafari', isSafari);
+
+/** allow register constant context keys that are known only after startup; requires running `substituteConstants` on the context key - https://github.com/microsoft/vscode/issues/174218#issuecomment-1437972127 */
+export function setConstant(key: string, value: boolean) {
+	if (CONSTANT_VALUES.get(key) !== undefined) { throw illegalArgument('contextkey.setConstant(k, v) invoked with already set constant `k`'); }
+
+	CONSTANT_VALUES.set(key, value);
+}
 
 const hasOwnProperty = Object.prototype.hasOwnProperty;
 
@@ -1515,7 +1524,7 @@ export class ContextKeyNotRegexExpr implements IContextKeyExpression {
 	}
 
 	public serialize(): string {
-		throw new Error('Method not implemented.');
+		return `!(${this._actual.serialize()})`;
 	}
 
 	public keys(): string[] {
@@ -2031,9 +2040,10 @@ export interface IContextKeyChangeEvent {
 	allKeysContainedIn(keys: IReadableSet<string>): boolean;
 }
 
+export type IScopedContextKeyService = IContextKeyService & IDisposable;
+
 export interface IContextKeyService {
 	readonly _serviceBrand: undefined;
-	dispose(): void;
 
 	onDidChangeContext: Event<IContextKeyChangeEvent>;
 	bufferChangeEvents(callback: Function): void;
@@ -2042,7 +2052,7 @@ export interface IContextKeyService {
 	contextMatchesRules(rules: ContextKeyExpression | undefined): boolean;
 	getContextKeyValue<T>(key: string): T | undefined;
 
-	createScoped(target: IContextKeyServiceTarget): IContextKeyService;
+	createScoped(target: IContextKeyServiceTarget): IScopedContextKeyService;
 	createOverlay(overlay: Iterable<[string, any]>): IContextKeyService;
 	getContext(target: IContextKeyServiceTarget | null): IContext;
 
